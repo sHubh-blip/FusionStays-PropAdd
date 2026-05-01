@@ -238,6 +238,7 @@ const RecordFormModal = ({ record, onClose, onSave, user, uniqueLocations = [], 
                 <option value="Inbound">Inbound</option>
                 <option value="Outbound">Outbound</option>
                 <option value="Referral">Referral</option>
+                <option value="Internal Lead">Internal Lead</option>
               </select>
             </InputWrapper>
 

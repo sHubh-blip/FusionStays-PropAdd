@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { LogOut, Plus, Search, Plane, Home, RefreshCw, Users, MapPin, Layers, Menu, X, ChevronDown, ChevronRight } from 'lucide-react';
 import api from '../api';
@@ -7,6 +8,7 @@ import RecordFormModal from '../components/RecordFormModal';
 
 const Dashboard = () => {
   const { user, logout } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -494,6 +496,13 @@ const Dashboard = () => {
                   title="Refresh"
                 >
                   <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin text-brand-500' : ''}`} />
+                </button>
+                <button 
+                  onClick={() => navigate('/leads')}
+                  className="bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl py-2.5 px-5 shadow-md hover:shadow-lg transition-all flex items-center flex-shrink-0 transform hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  <Layers className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">To Be Added (Internal Lead)</span>
                 </button>
                 <button 
                   onClick={handleCreate}

@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import InternalLeads from './pages/InternalLeads';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -34,6 +35,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/leads" 
+            element={
+              <ProtectedRoute>
+                <InternalLeads />
               </ProtectedRoute>
             } 
           />
