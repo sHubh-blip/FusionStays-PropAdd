@@ -53,7 +53,7 @@ const fetchSheetRows = async () => {
       "Remarks": cleanStr(row.get('Remarks')),
       "Details": cleanStr(row.get('Details'))
     };
-  });
+  }).filter(row => row["Name of property"] || row["Name of Person"] || row["Phone Number"]);
   console.timeEnd('mapRows');
   
   return { mock: false, rows: rowData, sheet };
