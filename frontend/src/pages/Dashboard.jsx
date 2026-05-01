@@ -33,18 +33,20 @@ const Dashboard = () => {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
+  const [fetchError, setFetchError] = useState(null);
 
   const fetchRecords = async () => {
     setIsLoading(true);
+    setFetchError(null);
     try {
       const { data } = await api.get('/records');
-      // Sort in descending order by _rowIndex to show latest records on top
       const sorted = Array.isArray(data) 
         ? [...data].sort((a, b) => (Number(b._rowIndex) || 0) - (Number(a._rowIndex) || 0))
         : [];
       setRecords(sorted);
     } catch (error) {
       console.error('Failed to fetch records', error);
+      setFetchError(error.response?.data?.message || error.message || 'Failed to connect to backend');
     } finally {
       setIsLoading(false);
     }
@@ -522,11 +524,25 @@ const Dashboard = () => {
                   <p className="text-slate-500 font-semibold animate-pulse">Syncing with Google Sheets...</p>
                 </div>
               ) : filteredRecords.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
                   <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-5 border border-slate-200">
                     <Home className="w-10 h-10 text-slate-300" />
                   </div>
-                  <h3 className="text-xl font-bold text-slate-800 mb-2">No properties found</h3>
+                  <h3 className="text-xl font-bold text-slate-800 mb-2">
+                    {fetchError ? 'Connection Error' : 'No properties found'}
+                  </h3>
+                  <p className="text-slate-500 max-w-sm mb-6">
+                    {fetchError 
+                      ? `The app couldn't load data: ${fetchError}. Please check your backend logs on Render.`
+                      : 'No records match your current filters or the database is empty.'}
+                  </p>
+                  {fetchError && (
+                    <button 
+                      onClick={fetchRecords}
+                      className="bg-brand-600 text-white px-6 py-2.5 rounded-xl font-semibold hover:bg-brand-700 transition"
+                    >
+                      Try Again
+                    </button>
+                  )}
                   <p className="text-slate-500 max-w-md mx-auto text-sm leading-relaxed">
                     {search || locationFilter || personFilter || statusFilter ? "We couldn't find any properties matching your active filters. Try adjusting your search or clearing them." : "Your database is empty. Get started by adding your very first property to the dashboard."}
                   </p>
