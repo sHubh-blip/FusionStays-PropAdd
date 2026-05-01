@@ -4,7 +4,6 @@ import { AuthProvider, AuthContext } from './context/AuthContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import InternalLeads from './pages/InternalLeads';
-import Reports from './pages/Reports';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -44,14 +43,6 @@ function App() {
             element={
               <ProtectedRoute>
                 <InternalLeads />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/reports" 
-            element={
-              <ProtectedRoute>
-                <Reports />
               </ProtectedRoute>
             } 
           />

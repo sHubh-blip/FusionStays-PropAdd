@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { LogOut, Plus, Search, Plane, Home, RefreshCw, Users, MapPin, Layers, Menu, X, ChevronDown, ChevronRight, BarChart } from 'lucide-react';
+import { LogOut, Plus, Search, Plane, Home, RefreshCw, Users, MapPin, Layers, Menu, X, ChevronDown, ChevronRight, BarChart, Calendar, TrendingUp } from 'lucide-react';
 import api from '../api';
 import RecordTable from '../components/RecordTable';
 import RecordFormModal from '../components/RecordFormModal';
@@ -34,6 +34,9 @@ const Dashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
   const [fetchError, setFetchError] = useState(null);
+  const [isReportsOpen, setIsReportsOpen] = useState(false);
+  const [expandedMember, setExpandedMember] = useState(null);
+  const [reportDateFilter, setReportDateFilter] = useState('all'); // all, today, week, month, year
 
   const fetchRecords = async () => {
     setIsLoading(true);
@@ -90,6 +93,44 @@ const Dashboard = () => {
   const uniqueLocations = useMemo(() => {
     return [...new Set([...records.map(r => r["Location"]), ...customLocations].filter(Boolean))].sort();
   }, [records, customLocations]);
+
+  const memberReportData = useMemo(() => {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    
+    // Helper to check if date is within last X days
+    const isWithinDays = (dateStr, days) => {
+      const d = new Date(dateStr);
+      const diff = (now - d) / (1000 * 60 * 60 * 24);
+      return diff <= days;
+    };
+
+    const filtered = records.filter(r => {
+      const date = r["Date of Entry"];
+      if (!date) return reportDateFilter === 'all';
+      
+      if (reportDateFilter === 'today') return date === today;
+      if (reportDateFilter === 'week') return isWithinDays(date, 7);
+      if (reportDateFilter === 'month') return isWithinDays(date, 30);
+      if (reportDateFilter === 'year') return date.startsWith(now.getFullYear().toString());
+      return true;
+    });
+
+    const report = {};
+    filtered.forEach(r => {
+      const member = r["Name of Person"] || "Unassigned";
+      const loc = r["Location"] || "Unknown Location";
+      
+      if (!report[member]) {
+        report[member] = { total: 0, locations: {} };
+      }
+      
+      report[member].total++;
+      report[member].locations[loc] = (report[member].locations[loc] || 0) + 1;
+    });
+
+    return report;
+  }, [records, reportDateFilter]);
 
   const handleAddLocation = (e) => {
     e.stopPropagation();
@@ -305,21 +346,78 @@ const Dashboard = () => {
               </ul>
             </div>
 
-            {/* Report Dashboard Link */}
+            {/* Report Dashboard Section */}
             <div className="border border-slate-100 bg-slate-50/50 rounded-2xl overflow-hidden transition-all shadow-sm">
               <button 
-                onClick={() => navigate('/reports')}
+                onClick={() => setIsReportsOpen(!isReportsOpen)}
                 className="w-full flex justify-between items-center px-4 py-3 bg-white hover:bg-slate-50 transition-colors"
               >
                 <div className="flex flex-col items-start gap-1">
                   <div className="flex items-center gap-2">
                     <BarChart className="w-4 h-4 text-brand-600" />
-                    <span className="text-sm font-bold text-slate-700">Team Reports</span>
+                    <span className="text-sm font-bold text-slate-700">Report Dashboard</span>
                   </div>
-                  <span className="text-[10px] bg-brand-50 px-2 py-0.5 rounded-full text-brand-600 font-bold uppercase tracking-tight">View Full Dashboard</span>
+                  <span className="text-[10px] bg-brand-50 px-2 py-0.5 rounded-full text-brand-600 font-bold uppercase tracking-tight">Real-time Metrics</span>
                 </div>
-                <ChevronRight className="w-5 h-5 text-slate-400" />
+                {isReportsOpen ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronRight className="w-5 h-5 text-slate-400" />}
               </button>
+
+              {isReportsOpen && (
+                <div className="p-3 space-y-4 border-t border-slate-100 bg-white">
+                  {/* Date Filter Tabs */}
+                  <div className="flex flex-wrap gap-1 bg-slate-100 p-1 rounded-xl">
+                    {['all', 'today', 'week', 'month', 'year'].map((filter) => (
+                      <button
+                        key={filter}
+                        onClick={() => setReportDateFilter(filter)}
+                        className={`flex-1 text-[9px] font-bold uppercase py-1.5 px-1 rounded-lg transition-all ${reportDateFilter === filter ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                      >
+                        {filter}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="space-y-2">
+                    {Object.entries(memberReportData).length === 0 ? (
+                      <div className="text-center py-4 text-xs text-slate-400 italic">No data for this period</div>
+                    ) : (
+                      Object.entries(memberReportData).sort((a, b) => b[1].total - a[1].total).map(([name, data]) => (
+                        <div key={name} className="space-y-1">
+                          <button 
+                            onClick={() => setExpandedMember(expandedMember === name ? null : name)}
+                            className={`w-full flex items-center justify-between p-2 rounded-xl transition-all ${expandedMember === name ? 'bg-slate-50 border border-slate-100' : 'hover:bg-slate-50'}`}
+                          >
+                            <div className="flex items-center gap-2.5 overflow-hidden">
+                              <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0 font-bold text-[10px]">
+                                {name.charAt(0)}
+                              </div>
+                              <span className="text-xs font-semibold text-slate-700 truncate">{name}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-md">{data.total}</span>
+                              {expandedMember === name ? <ChevronDown className="w-3 h-3 text-slate-400" /> : <ChevronRight className="w-3 h-3 text-slate-400" />}
+                            </div>
+                          </button>
+
+                          {expandedMember === name && (
+                            <div className="ml-9 pr-2 py-1 space-y-1 animate-fade-in">
+                              {Object.entries(data.locations).sort((a, b) => b[1] - a[1]).map(([loc, count]) => (
+                                <div key={loc} className="flex justify-between items-center text-[10px] text-slate-500 font-medium py-1 border-b border-slate-50 last:border-0">
+                                  <div className="flex items-center gap-1.5 truncate">
+                                    <MapPin className="w-2.5 h-2.5 text-slate-300" />
+                                    <span className="truncate">{loc}</span>
+                                  </div>
+                                  <span className="text-slate-700 font-bold ml-2">{count}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Locations Directory Dropdown */}
