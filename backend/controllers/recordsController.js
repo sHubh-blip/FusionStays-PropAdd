@@ -23,12 +23,18 @@ let mockDatabase = [
 
 // Helper to get raw data
 const fetchSheetRows = async () => {
+  console.time('initializeSheets');
   const doc = await initializeSheets();
+  console.timeEnd('initializeSheets');
+  
   if (!doc) return { mock: true, rows: mockDatabase }; // Mock mode
   
+  console.time('getRows');
   const sheet = doc.sheetsByIndex[0]; // First tab
-  const rows = await sheet.getRows();
+  const rows = await sheet.getRows({ offset: 0, limit: 500 }); // Limit to 500 rows for performance
+  console.timeEnd('getRows');
   
+  console.time('mapRows');
   // Clean up circular structure from google-spreadsheet to plain JSON
   const rowData = rows.map((row) => {
     return {
@@ -46,6 +52,7 @@ const fetchSheetRows = async () => {
       "Details": row.get('Details')
     };
   });
+  console.timeEnd('mapRows');
   
   return { mock: false, rows: rowData, sheet };
 };
