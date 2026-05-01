@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -48,6 +49,7 @@ function App() {
           />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
+        <Analytics />
       </BrowserRouter>
     </AuthProvider>
   );
