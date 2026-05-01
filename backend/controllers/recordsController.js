@@ -51,6 +51,7 @@ const fetchSheetRows = async () => {
 };
 
 let cache = { data: null, lastFetch: 0 };
+let activeFetchPromise = null;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // GET all records
@@ -60,10 +61,21 @@ router.get('/records', requireAuth, async (req, res) => {
     if (cache.data && (now - cache.lastFetch) < CACHE_TTL) {
       return res.json(cache.data);
     }
-    const data = await fetchSheetRows();
-    cache.data = data.rows;
-    cache.lastFetch = now;
-    res.json(data.rows);
+
+    if (activeFetchPromise) {
+      const data = await activeFetchPromise;
+      return res.json(data.rows);
+    }
+
+    activeFetchPromise = fetchSheetRows();
+    try {
+      const data = await activeFetchPromise;
+      cache.data = data.rows;
+      cache.lastFetch = Date.now();
+      res.json(data.rows);
+    } finally {
+      activeFetchPromise = null;
+    }
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch records', error: error.message });
   }
