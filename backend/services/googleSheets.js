@@ -10,10 +10,19 @@ const initializeSheets = async () => {
   }
 
   try {
+    let privateKey = process.env.GOOGLE_PRIVATE_KEY;
+    // Remove surrounding quotes if they were accidentally pasted into Render
+    if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+      privateKey = privateKey.slice(1, -1);
+    }
+    if (privateKey.startsWith("'") && privateKey.endsWith("'")) {
+      privateKey = privateKey.slice(1, -1);
+    }
+
     const serviceAccountAuth = new JWT({
       email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
       // Replace escaped newlines with actual newlines
-      key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      key: privateKey.replace(/\\n/g, '\n'),
       scopes: [
         'https://www.googleapis.com/auth/spreadsheets',
       ],
