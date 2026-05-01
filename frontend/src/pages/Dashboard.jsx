@@ -524,6 +524,7 @@ const Dashboard = () => {
                   <p className="text-slate-500 font-semibold animate-pulse">Syncing with Google Sheets...</p>
                 </div>
               ) : filteredRecords.length === 0 ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
                   <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-5 border border-slate-200">
                     <Home className="w-10 h-10 text-slate-300" />
                   </div>
