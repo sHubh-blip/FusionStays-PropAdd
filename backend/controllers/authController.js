@@ -6,7 +6,7 @@ router.post('/login', (req, res) => {
   const { email, password } = req.body;
 
   // Use values from .env for MVP
-  const validEmail = process.env.ADMIN_EMAIL || 'admin@travelsync.com';
+  const validEmail = process.env.ADMIN_EMAIL || 'admin@fusionstays.com';
   const validPassword = process.env.ADMIN_PASSWORD || 'admin123';
 
   if (!email || !password) {

@@ -11,7 +11,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*', // Vercel deployment URL
+  origin: process.env.FRONTEND_URL || true, // Use exact frontend URL or allow requesting origin
   credentials: true
 }));
 app.use(express.json());
