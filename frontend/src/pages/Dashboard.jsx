@@ -137,16 +137,16 @@ const Dashboard = () => {
       
       let matchesPerson = true;
       if (personFilter) {
-        matchesPerson = (record["Name of Person"] || "").toLowerCase() === personFilter.toLowerCase();
+        matchesPerson = record["Name of Person"] === personFilter;
       }
 
       let matchesLocation = true;
       if (locationFilter) {
-        matchesLocation = (record["Location"] || "").toLowerCase() === locationFilter.toLowerCase();
+        matchesLocation = record["Location"] === locationFilter;
       }
       let matchesStatus = true;
       if (statusFilter) {
-        matchesStatus = (record["Status"] || "").toLowerCase() === statusFilter.toLowerCase();
+        matchesStatus = record["Status"] === statusFilter;
       }
 
       return matchesSearch && matchesPerson && matchesLocation && matchesStatus;
