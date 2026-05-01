@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { LogOut, Plus, Search, Plane, Home, RefreshCw, Users, MapPin, Layers, Menu, X, ChevronDown, ChevronRight, BarChart3, Calendar, TrendingUp } from 'lucide-react';
+import { LogOut, Plus, Search, Plane, Home, RefreshCw, Users, MapPin, Layers, Menu, X, ChevronDown, ChevronRight, BarChart, Calendar, TrendingUp } from 'lucide-react';
 import api from '../api';
 import RecordTable from '../components/RecordTable';
 import RecordFormModal from '../components/RecordFormModal';
@@ -354,7 +354,7 @@ const Dashboard = () => {
               >
                 <div className="flex flex-col items-start gap-1">
                   <div className="flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4 text-brand-600" />
+                    <BarChart className="w-4 h-4 text-brand-600" />
                     <span className="text-sm font-bold text-slate-700">Report Dashboard</span>
                   </div>
                   <span className="text-[10px] bg-brand-50 px-2 py-0.5 rounded-full text-brand-600 font-bold uppercase tracking-tight">Real-time Metrics</span>
@@ -639,6 +639,7 @@ const Dashboard = () => {
                   <p className="text-slate-500 font-semibold animate-pulse">Syncing with Google Sheets...</p>
                 </div>
               ) : filteredRecords.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
                   <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-5 border border-slate-200">
                     <Home className="w-10 h-10 text-slate-300" />
                   </div>
