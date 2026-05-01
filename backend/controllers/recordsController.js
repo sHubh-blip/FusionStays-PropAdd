@@ -31,25 +31,27 @@ const fetchSheetRows = async () => {
   
   console.time('getRows');
   const sheet = doc.sheetsByIndex[0]; // First tab
-  const rows = await sheet.getRows({ offset: 0, limit: 500 }); // Limit to 500 rows for performance
+  const rows = await sheet.getRows(); // Fetch all rows
   console.timeEnd('getRows');
   
   console.time('mapRows');
+  const cleanStr = (val) => val ? val.toString().trim() : '';
+
   // Clean up circular structure from google-spreadsheet to plain JSON
   const rowData = rows.map((row) => {
     return {
       _rowIndex: row.rowNumber, // Original row number for updates
-      "Date of Entry": row.get('Date of Entry') || row.get('Date Of Entry'),
-      "Name of Person": row.get('Name of Person'),
-      "Name of property": row.get('Name of property'),
-      "Location": row.get('Location'),
-      "Phone Number": row.get('Phone Number'),
-      "Source": row.get('Source'),
-      "Reason to List": row.get('Reason to List'),
-      "Status": row.get('Status'),
-      "Live Date": row.get('Live Date'),
-      "Remarks": row.get('Remarks'),
-      "Details": row.get('Details')
+      "Date of Entry": cleanStr(row.get('Date of Entry') || row.get('Date Of Entry')),
+      "Name of Person": cleanStr(row.get('Name of Person')),
+      "Name of property": cleanStr(row.get('Name of property')),
+      "Location": cleanStr(row.get('Location')),
+      "Phone Number": cleanStr(row.get('Phone Number')),
+      "Source": cleanStr(row.get('Source')),
+      "Reason to List": cleanStr(row.get('Reason to List')),
+      "Status": cleanStr(row.get('Status')),
+      "Live Date": cleanStr(row.get('Live Date')),
+      "Remarks": cleanStr(row.get('Remarks')),
+      "Details": cleanStr(row.get('Details'))
     };
   });
   console.timeEnd('mapRows');
