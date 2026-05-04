@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const requireAuth = require('../middleware/auth');
 const { initializeSheets } = require('../services/googleSheets');
+const cache = require('../services/cache');
+
+const CACHE_KEY = 'all_records';
 
 // In-memory fallback if Google Sheets isn't configured for MVP testing
 let mockDatabase = [
@@ -21,76 +24,92 @@ let mockDatabase = [
   }
 ];
 
+const { fetchAndMapRecords } = require('../services/sheetService');
+
 // Helper to get raw data
 const fetchSheetRows = async () => {
-  console.time('initializeSheets');
-  const doc = await initializeSheets();
-  console.timeEnd('initializeSheets');
-  
-  if (!doc) return { mock: true, rows: mockDatabase }; // Mock mode
-  
-  console.time('getRows');
-  const sheet = doc.sheetsByIndex[0]; // First tab
-  const rows = await sheet.getRows(); // Fetch all rows
-  console.timeEnd('getRows');
-  
-  console.time('mapRows');
-  const cleanStr = (val) => val ? val.toString().trim() : '';
-
-  // Clean up circular structure from google-spreadsheet to plain JSON
-  const rowData = rows.map((row) => {
-    return {
-      _rowIndex: row.rowNumber, // Original row number for updates
-      "Date of Entry": cleanStr(row.get('Date of Entry') || row.get('Date Of Entry')),
-      "Name of Person": cleanStr(row.get('Name of Person')),
-      "Name of property": cleanStr(row.get('Name of property')),
-      "Location": cleanStr(row.get('Location')),
-      "Phone Number": cleanStr(row.get('Phone Number')),
-      "Source": cleanStr(row.get('Source')),
-      "Reason to List": cleanStr(row.get('Reason to List')),
-      "Status": cleanStr(row.get('Status')),
-      "Live Date": cleanStr(row.get('Live Date')),
-      "Remarks": cleanStr(row.get('Remarks')),
-      "Details": cleanStr(row.get('Details'))
-    };
-  }).filter(row => row["Name of property"] || row["Name of Person"] || row["Phone Number"]);
-  console.timeEnd('mapRows');
-  
-  return { mock: false, rows: rowData, sheet };
+  const records = await fetchAndMapRecords();
+  if (!records) return { mock: true, rows: mockDatabase }; // Mock mode
+  return { mock: false, rows: records };
 };
 
-let cache = { data: null, lastFetch: 0 };
-let activeFetchPromise = null;
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-// GET all records
+// GET all records with Pagination & Filtering (Task 2)
 router.get('/records', requireAuth, async (req, res) => {
   try {
-    const now = Date.now();
-    if (cache.data && (now - cache.lastFetch) < CACHE_TTL) {
-      return res.json(cache.data);
+    const {
+      page = 1,
+      limit = 50,
+      status,
+      agent,
+      location,
+      search,
+      paginate = 'true'
+    } = req.query;
+
+    // 1. Try cache first (Task 1)
+    let records = cache.get(CACHE_KEY);
+    let fromCache = true;
+
+    if (!records) {
+      const data = await fetchSheetRows();
+      records = data.rows;
+      cache.set(CACHE_KEY, records, 60); 
+      fromCache = false;
     }
 
-    if (activeFetchPromise) {
-      const data = await activeFetchPromise;
-      return res.json(data.rows);
+    // 2. Server-side filtering
+    let filteredRecords = [...records];
+
+    if (status) {
+      filteredRecords = filteredRecords.filter(r => 
+        (r["Status"] || "").toLowerCase() === status.toLowerCase()
+      );
+    }
+    if (agent) {
+      filteredRecords = filteredRecords.filter(r => 
+        (r["Name of Person"] || "").toLowerCase() === agent.toLowerCase()
+      );
+    }
+    if (location) {
+      filteredRecords = filteredRecords.filter(r => 
+        (r["Location"] || "").toLowerCase().includes(location.toLowerCase())
+      );
+    }
+    if (search) {
+      const q = search.toLowerCase();
+      filteredRecords = filteredRecords.filter(r =>
+        (r["Name of property"] || "").toLowerCase().includes(q) ||
+        (r["Location"] || "").toLowerCase().includes(q) ||
+        (r["Name of Person"] || "").toLowerCase().includes(q)
+      );
     }
 
-    activeFetchPromise = fetchSheetRows();
-    try {
-      const data = await activeFetchPromise;
-      cache.data = data.rows;
-      cache.lastFetch = Date.now();
-      res.json(data.rows);
-    } finally {
-      activeFetchPromise = null;
-    }
+    // 3. Server-side pagination
+    const total = filteredRecords.length;
+    const totalPages = Math.ceil(total / limit);
+    const offset = (Number(page) - 1) * Number(limit);
+    
+    const paginated = paginate === 'false' 
+      ? filteredRecords 
+      : filteredRecords.slice(offset, offset + Number(limit));
+
+    res.setHeader('X-Data-Source', fromCache ? 'cache' : 'sheets');
+    res.json({
+      data: paginated,
+      meta: {
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages,
+      },
+      source: fromCache ? 'cache' : 'sheets'
+    });
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch records', error: error.message });
   }
 });
 
-// POST a new record
+// POST a new record (Task 3: Invalidation)
 router.post('/records', requireAuth, async (req, res) => {
   try {
     const doc = await initializeSheets();
@@ -109,10 +128,9 @@ router.post('/records', requireAuth, async (req, res) => {
     };
 
     if (!doc) {
-      // Mock mode create
       newRecord._id = "mock" + Date.now();
       mockDatabase.push(newRecord);
-      cache.data = null; // Invalidate cache
+      cache.del(CACHE_KEY); 
       return res.status(201).json({ message: 'Record added in Mock Mode', record: newRecord });
     }
 
@@ -120,25 +138,24 @@ router.post('/records', requireAuth, async (req, res) => {
     const addedRow = await sheet.addRow(newRecord);
     newRecord._rowIndex = addedRow.rowNumber;
     
-    cache.data = null; // Invalidate cache
+    cache.del(CACHE_KEY); // Invalidate cache
     res.status(201).json({ message: 'Record added to Google Sheets', record: newRecord });
   } catch (error) {
     res.status(500).json({ message: 'Failed to create record', error: error.message });
   }
 });
 
-// PUT update an existing record
+// PUT update an existing record (Task 3: Invalidation)
 router.put('/records/:id', requireAuth, async (req, res) => {
   try {
     const doc = await initializeSheets();
-    const id = req.params.id; // Either "_rowIndex" or "mock id"
+    const id = req.params.id;
 
     if (!doc) {
-      // Mock mode update
       const index = mockDatabase.findIndex(r => r._id === id);
       if (index === -1) return res.status(404).json({ message: 'Mock record not found' });
       mockDatabase[index] = { ...mockDatabase[index], ...req.body, _id: id };
-      cache.data = null; // Invalidate cache
+      cache.del(CACHE_KEY);
       return res.json({ message: 'Mock record updated', record: mockDatabase[index] });
     }
 
@@ -150,7 +167,6 @@ router.put('/records/:id', requireAuth, async (req, res) => {
       return res.status(404).json({ message: 'Row not found in Google Sheets' });
     }
 
-    // Assign new values safely
     const updatableFields = [
       "Date of Entry", "Name of Person", "Name of property", "Location", 
       "Phone Number", "Source", "Reason to List", "Status", "Live Date", 
@@ -164,12 +180,18 @@ router.put('/records/:id', requireAuth, async (req, res) => {
     });
 
     await rowToUpdate.save();
-    
-    cache.data = null; // Invalidate cache
+    cache.del(CACHE_KEY); // Invalidate cache
     res.json({ message: 'Row updated successfully in Google Sheets' });
   } catch (error) {
     res.status(500).json({ message: 'Failed to update record', error: error.message });
   }
+});
+
+// Manual cache-bust endpoint (Task 3)
+router.post('/cache/invalidate', (req, res) => {
+  cache.flush();
+  console.log('[Cache] Manually flushed at', new Date().toISOString());
+  res.json({ success: true, message: 'Cache cleared' });
 });
 
 module.exports = router;

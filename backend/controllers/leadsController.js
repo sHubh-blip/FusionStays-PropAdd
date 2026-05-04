@@ -77,77 +77,62 @@ router.get('/leads', requireAuth, async (req, res) => {
   }
 });
 
-// POST a new lead with image
+// POST a new lead (upload)
 router.post('/leads', requireAuth, upload.single('screenshot'), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ message: 'No screenshot uploaded' });
-    }
+    if (!req.file) return res.status(400).json({ message: 'No screenshot uploaded' });
 
-    const { sheet, mock } = await fetchLeadsSheet();
-    
-    // Create base URL using protocol and host if available
-    // Otherwise fallback to relative URL
-    let baseUrl = '';
-    if (req.protocol && req.get('host')) {
-        baseUrl = `${req.protocol}://${req.get('host')}`;
-    }
-    
     const newLead = {
-      "Date Added": new Date().toISOString().split('T')[0],
-      "Screenshot URL": `${baseUrl}/uploads/${req.file.filename}`,
-      "Assigned To": req.body.assignedTo || '',
-      "Status": 'Pending',
+      "Date Added": new Date().toLocaleDateString('en-GB'), // DD/MM/YYYY
+      "Screenshot URL": `/uploads/${req.file.filename}`,
+      "Assigned To": req.body['Assigned To'] || '',
+      "Status": 'Pending'
     };
 
-    if (mock) {
-      newLead._id = "mockLead" + Date.now();
+    const doc = await initializeSheets();
+    if (!doc) {
+      newLead._id = "mocklead" + Date.now();
       mockLeadsDatabase.push(newLead);
       return res.status(201).json({ message: 'Lead added in Mock Mode', lead: newLead });
     }
 
-    const addedRow = await sheet.addRow(newLead);
-    newLead._rowIndex = addedRow.rowNumber;
+    const { sheet } = await fetchLeadsSheet();
+    if (!sheet) throw new Error('Sheet not found for append');
     
+    await sheet.addRow(newLead);
     res.status(201).json({ message: 'Lead added to Google Sheets', lead: newLead });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to create lead', error: error.message });
+    res.status(500).json({ message: 'Failed to upload lead', error: error.message });
   }
 });
 
-// PUT update a lead status (e.g. Added)
+// PUT update a lead status
 router.put('/leads/:id', requireAuth, async (req, res) => {
-  try {
-    const id = req.params.id; // Either "_rowIndex" or "mock id"
-    const { sheet, mock } = await fetchLeadsSheet();
-
-    if (mock) {
-      const index = mockLeadsDatabase.findIndex(r => r._id === id);
-      if (index === -1) return res.status(404).json({ message: 'Mock lead not found' });
-      mockLeadsDatabase[index] = { ...mockLeadsDatabase[index], ...req.body, _id: id };
-      return res.json({ message: 'Mock lead updated', lead: mockLeadsDatabase[index] });
-    }
-
-    const rows = await sheet.getRows();
-    const rowToUpdate = rows.find(r => r.rowNumber.toString() === id);
-
-    if (!rowToUpdate) {
-      return res.status(404).json({ message: 'Row not found in Google Sheets' });
-    }
-
-    const updatableFields = ["Assigned To", "Status"];
-    updatableFields.forEach(field => {
-      if (req.body[field] !== undefined) {
-         rowToUpdate.assign({[field]: req.body[field]});
+    try {
+      const doc = await initializeSheets();
+      const id = req.params.id;
+  
+      if (!doc) {
+        const index = mockLeadsDatabase.findIndex(r => r._id === id);
+        if (index === -1) return res.status(404).json({ message: 'Mock lead not found' });
+        mockLeadsDatabase[index] = { ...mockLeadsDatabase[index], ...req.body };
+        return res.json({ message: 'Mock lead updated' });
       }
-    });
-
-    await rowToUpdate.save();
-    
-    res.json({ message: 'Lead updated successfully in Google Sheets' });
-  } catch (error) {
-    res.status(500).json({ message: 'Failed to update lead', error: error.message });
-  }
-});
+  
+      const { sheet } = await fetchLeadsSheet();
+      const rows = await sheet.getRows();
+      const rowToUpdate = rows.find(r => r.rowNumber.toString() === id);
+  
+      if (!rowToUpdate) return res.status(404).json({ message: 'Lead not found' });
+  
+      if (req.body['Status']) rowToUpdate.assign({ Status: req.body['Status'] });
+      if (req.body['Assigned To']) rowToUpdate.assign({ "Assigned To": req.body['Assigned To'] });
+  
+      await rowToUpdate.save();
+      res.json({ message: 'Lead updated successfully' });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to update lead', error: error.message });
+    }
+  });
 
 module.exports = router;

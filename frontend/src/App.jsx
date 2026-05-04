@@ -4,6 +4,7 @@ import { AuthProvider, AuthContext } from './context/AuthContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import InternalLeads from './pages/InternalLeads';
+import Reports from './pages/Reports';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -30,21 +31,29 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route 
-            path="/dashboard" 
+          <Route
+            path="/dashboard"
             element={
               <ProtectedRoute>
                 <Dashboard />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/leads" 
+          <Route
+            path="/leads"
             element={
               <ProtectedRoute>
                 <InternalLeads />
               </ProtectedRoute>
-            } 
+            }
+          />
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute>
+                <Reports />
+              </ProtectedRoute>
+            }
           />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>

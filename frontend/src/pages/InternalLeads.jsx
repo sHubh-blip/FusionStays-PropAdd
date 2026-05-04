@@ -14,7 +14,7 @@ const InternalLeads = () => {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
-  
+
   // We need these for RecordFormModal
   const [uniqueLocations, setUniqueLocations] = useState([]);
   const [uniquePersons, setUniquePersons] = useState([]);
@@ -32,17 +32,17 @@ const InternalLeads = () => {
   };
 
   const fetchRecordsForDropdowns = async () => {
-      try {
-          const { data } = await api.get('/records');
-          if (Array.isArray(data)) {
-              const locs = [...new Set(data.map(r => r["Location"]).filter(Boolean))].sort();
-              const persons = [...new Set(data.map(r => r["Name of Person"]).filter(Boolean))].sort();
-              setUniqueLocations(locs);
-              setUniquePersons(persons);
-          }
-      } catch (err) {
-          console.error(err);
+    try {
+      const { data } = await api.get('/records');
+      if (Array.isArray(data)) {
+        const locs = [...new Set(data.map(r => r["Location"]).filter(Boolean))].sort();
+        const persons = [...new Set(data.map(r => r["Name of Person"]).filter(Boolean))].sort();
+        setUniqueLocations(locs);
+        setUniquePersons(persons);
       }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   useEffect(() => {
@@ -66,8 +66,8 @@ const InternalLeads = () => {
       await api.post('/records', formData);
       // 2. Mark lead as added
       if (selectedLead && (selectedLead._id || selectedLead._rowIndex)) {
-          const leadId = selectedLead._id || selectedLead._rowIndex;
-          await api.put(`/leads/${leadId}`, { Status: 'Added' });
+        const leadId = selectedLead._id || selectedLead._rowIndex;
+        await api.put(`/leads/${leadId}`, { Status: 'Added' });
       }
       setIsRecordModalOpen(false);
       fetchLeads();
@@ -94,7 +94,7 @@ const InternalLeads = () => {
             </button>
             <h1 className="text-2xl font-bold text-slate-800">Internal Leads (To Be Added)</h1>
           </div>
-          <button 
+          <button
             onClick={() => setIsUploadOpen(true)}
             className="bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl py-2.5 px-5 shadow-md flex items-center transition-all transform hover:-translate-y-0.5 active:translate-y-0"
           >
@@ -108,11 +108,11 @@ const InternalLeads = () => {
             <div className="p-20 flex justify-center"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-500"></div></div>
           ) : leads.length === 0 ? (
             <div className="p-20 flex flex-col items-center justify-center text-center">
-                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                    <ImageIcon className="w-8 h-8 text-slate-400" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-700">No Internal Leads</h3>
-                <p className="text-slate-500 max-w-sm mt-2 text-sm">Upload a screenshot of a potential property and assign it to a team member to get started.</p>
+              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                <ImageIcon className="w-8 h-8 text-slate-400" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-700">No Internal Leads</h3>
+              <p className="text-slate-500 max-w-sm mt-2 text-sm">Upload a screenshot of a potential property and assign it to a team member to get started.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -145,7 +145,7 @@ const InternalLeads = () => {
                       </td>
                       <td className="py-4 px-6 text-right">
                         {lead['Status'] !== 'Added' && (
-                          <button 
+                          <button
                             onClick={() => handleAddToDatabase(lead)}
                             className="text-sm bg-white border border-slate-200 text-slate-600 hover:bg-brand-600 hover:text-white hover:border-transparent px-4 py-2 rounded-xl transition-all font-semibold shadow-sm focus:outline-none"
                           >
@@ -163,15 +163,15 @@ const InternalLeads = () => {
       </div>
 
       {isUploadOpen && (
-        <LeadUploadModal 
-          onClose={() => setIsUploadOpen(false)} 
-          onComplete={handleUploadComplete} 
+        <LeadUploadModal
+          onClose={() => setIsUploadOpen(false)}
+          onComplete={handleUploadComplete}
           uniquePersons={uniquePersons}
         />
       )}
 
       {isRecordModalOpen && (
-        <RecordFormModal 
+        <RecordFormModal
           record={{ "Source": "Internal Lead" }} // Pre-fill source
           onClose={() => setIsRecordModalOpen(false)}
           onSave={handleRecordSave}

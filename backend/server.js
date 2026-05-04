@@ -1,17 +1,33 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
+const { initializeSheets } = require('./services/googleSheets');
+const cache = require('./services/cache');
 
 const authRoutes = require('./controllers/authController');
 const recordsRoutes = require('./controllers/recordsController');
 const leadsRoutes = require('./controllers/leadsController');
-const path = require('path');
 
 const app = express();
 
+// Task 8: Performance Monitoring Middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const source = res.getHeader('X-Data-Source') || 'server';
+    console.log(`[${req.method}] ${req.path} — ${duration}ms (${source})`);
+    if (duration > 1000) {
+      console.warn(`⚠️ SLOW RESPONSE: ${req.path} took ${duration}ms`);
+    }
+  });
+  next();
+});
+
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || true, // Use exact frontend URL or allow requesting origin
+  origin: process.env.FRONTEND_URL || true,
   credentials: true
 }));
 app.use(express.json());
@@ -30,4 +46,26 @@ app.get('/health', (req, res) => res.status(200).json({ status: 'ok' }));
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  
+  // Task 4: Background Prefetch Worker
+  const { fetchAndMapRecords } = require('./services/sheetService');
+  const PREFETCH_INTERVAL = 45 * 1000; // 45s
+  
+  async function prefetchSheetData() {
+    try {
+      console.log('[Prefetch] Refreshing cache from Google Sheets...');
+      const records = await fetchAndMapRecords();
+      
+      if (records) {
+        cache.set('all_records', records, 60);
+        console.log(`[Prefetch] Successfully cached ${records.length} records`);
+      }
+    } catch (err) {
+      console.error('[Prefetch] Failed:', err.message);
+    }
+  }
+
+  // Initial prefetch and set interval
+  prefetchSheetData();
+  setInterval(prefetchSheetData, PREFETCH_INTERVAL);
 });
