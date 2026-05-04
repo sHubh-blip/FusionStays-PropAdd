@@ -44,12 +44,16 @@ const Reports = () => {
     };
 
     const filtered = records.filter(r => {
-      const date = r["Date of Entry"];
-      if (!date) return dateFilter === 'all';
-      if (dateFilter === 'today') return date === today;
-      if (dateFilter === 'week') return isWithinDays(date, 7);
-      if (dateFilter === 'month') return isWithinDays(date, 30);
-      if (dateFilter === 'year') return date.startsWith(now.getFullYear().toString());
+      const dateStr = r["Date of Entry"];
+      if (!dateStr) return dateFilter === 'all';
+      
+      const d = new Date(dateStr);
+      if (dateFilter === 'today') return dateStr === today;
+      if (dateFilter === 'week') return isWithinDays(dateStr, 7);
+      if (dateFilter === 'month') {
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      }
+      if (dateFilter === 'year') return d.getFullYear() === now.getFullYear();
       return true;
     });
 
@@ -59,10 +63,13 @@ const Reports = () => {
       const loc = r["Location"] || "Unknown Location";
 
       if (!report[member]) {
-        report[member] = { total: 0, locations: {}, lastActive: null };
+        report[member] = { total: 0, lives: 0, locations: {}, lastActive: null };
       }
 
       report[member].total++;
+      if (r["Status"] === "Live") {
+        report[member].lives++;
+      }
       report[member].locations[loc] = (report[member].locations[loc] || 0) + 1;
       
       if (!report[member].lastActive || r["Date of Entry"] > report[member].lastActive) {
@@ -73,11 +80,11 @@ const Reports = () => {
     const totalRecords = filtered.length;
     const activeAgents = Object.keys(report).length;
     
-    // Find top agent
+    // Find top agent based on LIVE status
     let topAgent = { name: 'None', count: 0 };
     Object.entries(report).forEach(([name, data]) => {
-      if (data.total > topAgent.count) {
-        topAgent = { name, count: data.total };
+      if (data.lives > topAgent.count) {
+        topAgent = { name, count: data.lives };
       }
     });
 
@@ -196,7 +203,7 @@ const Reports = () => {
           <StatCard 
             title="Top Performer" 
             value={stats.topAgent.name} 
-            subtitle={`${stats.topAgent.count} entries`}
+            subtitle={`${stats.topAgent.count} live units`}
             icon={<Award className="w-6 h-6" />} 
             color="amber"
           />

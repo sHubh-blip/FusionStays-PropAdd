@@ -221,11 +221,19 @@ const Dashboard = () => {
                 </div>
                 <input
                   type="text"
+                  list="search-suggestions"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search globally by property..."
                   className="w-full bg-slate-100 border border-transparent rounded-xl py-2 pl-10 pr-4 focus:outline-none focus:bg-white focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
                 />
+                <datalist id="search-suggestions">
+                  {useMemo(() => {
+                    const props = [...new Set(allRecords.map(r => r["Property Name"]).filter(Boolean))].slice(0, 10);
+                    const locs = [...new Set(allRecords.map(r => r["Location"]).filter(Boolean))].slice(0, 10);
+                    return [...props, ...locs].map(item => <option key={item} value={item} />);
+                  }, [allRecords])}
+                </datalist>
               </div>
             </div>
 
@@ -449,11 +457,19 @@ const Dashboard = () => {
                   </div>
                   <input
                     type="text"
+                    list="search-suggestions-mobile"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search..."
                     className="w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-9 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm transition-all"
                   />
+                  <datalist id="search-suggestions-mobile">
+                    {useMemo(() => {
+                      const props = [...new Set(allRecords.map(r => r["Property Name"]).filter(Boolean))].slice(0, 10);
+                      const locs = [...new Set(allRecords.map(r => r["Location"]).filter(Boolean))].slice(0, 10);
+                      return [...props, ...locs].map(item => <option key={item} value={item} />);
+                    }, [allRecords])}
+                  </datalist>
                 </div>
 
                 <div className="relative">
