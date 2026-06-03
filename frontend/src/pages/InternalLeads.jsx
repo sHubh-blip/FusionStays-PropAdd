@@ -125,9 +125,8 @@ const InternalLeads = () => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase font-semibold tracking-wider">
-                    <th className="py-4 px-6 w-[12%]">Date Added</th>
-                    <th className="py-4 px-6 w-[35%]">Property Details</th>
-                    <th className="py-4 px-6 w-[13%]">Screenshot</th>
+                    <th className="py-4 px-6 w-[15%]">Date Added</th>
+                    <th className="py-4 px-6 w-[45%]">Property Details</th>
                     <th className="py-4 px-6 w-[15%]">Assigned To</th>
                     <th className="py-4 px-6 w-[10%]">Status</th>
                     <th className="py-4 px-6 w-[15%] text-right">Actions</th>
@@ -157,16 +156,6 @@ const InternalLeads = () => {
                             </a>
                           )}
                         </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        {lead['Screenshot URL'] ? (
-                          <a href={getImageUrl(lead['Screenshot URL'])} target="_blank" rel="noreferrer" className="inline-flex items-center bg-slate-100 hover:bg-brand-50 text-slate-600 hover:text-brand-600 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">
-                            <ImageIcon className="w-3.5 h-3.5 mr-1.5" />
-                            View Image
-                          </a>
-                        ) : (
-                          <span className="text-slate-400 text-xs italic font-medium">No Image</span>
-                        )}
                       </td>
                       <td className="py-4 px-6 text-sm font-bold text-slate-800">{lead['Assigned To'] || <span className="text-slate-400 font-medium">Unassigned</span>}</td>
                       <td className="py-4 px-6">
