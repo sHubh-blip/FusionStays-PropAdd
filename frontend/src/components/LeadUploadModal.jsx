@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { X, Upload, CheckCircle, Home, Link2, Phone, MapPin, UserCheck, Image } from 'lucide-react';
+import { X, Home, Link2, Phone, MapPin, UserCheck } from 'lucide-react';
 import api from '../api';
 
 const LeadUploadModal = ({ onClose, onComplete, uniquePersons = [], uniqueLocations = [] }) => {
-  const [file, setFile] = useState(null);
   const [propertyName, setPropertyName] = useState('');
   const [linkToProperty, setLinkToProperty] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -11,13 +10,6 @@ const LeadUploadModal = ({ onClose, onComplete, uniquePersons = [], uniqueLocati
   const [assignedTo, setAssignedTo] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-      setError('');
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,9 +30,6 @@ const LeadUploadModal = ({ onClose, onComplete, uniquePersons = [], uniqueLocati
     setError('');
 
     const formData = new FormData();
-    if (file) {
-      formData.append('screenshot', file);
-    }
     formData.append('Name of Property', propertyName.trim());
     formData.append('Link to Property', linkToProperty.trim());
     formData.append('Phone Number', phoneNumber.trim());
@@ -68,7 +57,7 @@ const LeadUploadModal = ({ onClose, onComplete, uniquePersons = [], uniqueLocati
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-shrink-0">
           <div>
-            <h3 className="font-bold text-slate-800 text-lg">Upload & Assign Lead</h3>
+            <h3 className="font-bold text-slate-800 text-lg">Create & Assign Lead</h3>
             <p className="text-xs text-slate-500 mt-0.5 font-medium">Input lead details and assign to a team member</p>
           </div>
           <button
@@ -80,7 +69,7 @@ const LeadUploadModal = ({ onClose, onComplete, uniquePersons = [], uniqueLocati
         </div>
 
         {/* Scrollable Form Container */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto custom-scrollbar space-y-5 flex-1 max-h-[70vh]">
+        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto custom-scrollbar space-y-5 flex-1">
           {error && (
             <div className="bg-rose-50 border border-rose-100 text-rose-600 text-xs font-semibold p-3 rounded-xl animate-fade-in">
               {error}
@@ -180,38 +169,6 @@ const LeadUploadModal = ({ onClose, onComplete, uniquePersons = [], uniqueLocati
                   <option key={person} value={person}>{person}</option>
                 ))}
               </select>
-            </div>
-          </div>
-
-          {/* Optional Screenshot upload */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Lead Image (Optional)</label>
-            <div 
-              className={`border-2 border-dashed rounded-xl p-5 flex flex-col items-center justify-center transition-all cursor-pointer ${file ? 'border-emerald-250 bg-emerald-50/20' : 'border-slate-200 bg-slate-50 hover:border-brand-400 hover:bg-slate-100/50'}`}
-              onClick={() => document.getElementById('screenshot-input').click()}
-            >
-              <input
-                id="screenshot-input"
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-              {file ? (
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-9 h-9 bg-emerald-100 rounded-full flex items-center justify-center mb-2">
-                    <CheckCircle className="w-5 h-5 text-emerald-600" />
-                  </div>
-                  <p className="text-xs font-bold text-slate-800 truncate max-w-[250px]">{file.name}</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">{(file.size / 1024).toFixed(1)} KB • Click to change</p>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center text-center">
-                  <Upload className="w-5 h-5 text-slate-400 mb-1" />
-                  <p className="text-xs font-bold text-slate-600">Click to upload screenshot</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">PNG, JPG, or GIF</p>
-                </div>
-              )}
             </div>
           </div>
         </form>
