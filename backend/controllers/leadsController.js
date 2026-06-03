@@ -83,7 +83,7 @@ router.post('/leads', requireAuth, upload.single('screenshot'), async (req, res)
     if (!req.file) return res.status(400).json({ message: 'No screenshot uploaded' });
 
     const newLead = {
-      "Date Added": new Date().toLocaleDateString('en-GB'), // DD/MM/YYYY
+      "Date Added": new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata' }).format(new Date()), // DD/MM/YYYY
       "Screenshot URL": `/uploads/${req.file.filename}`,
       "Assigned To": req.body['Assigned To'] || '',
       "Status": 'Pending'

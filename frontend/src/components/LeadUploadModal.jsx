@@ -1,48 +1,60 @@
 import React, { useState } from 'react';
-import { X, UploadCloud, Image as ImageIcon } from 'lucide-react';
+import { X, Upload, CheckCircle } from 'lucide-react';
 import api from '../api';
 
 const LeadUploadModal = ({ onClose, onComplete, uniquePersons = [] }) => {
   const [file, setFile] = useState(null);
   const [assignedTo, setAssignedTo] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+      setError('');
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!file) {
-      setError('Please select a screenshot to upload.');
+      setError('Please select a screenshot');
+      return;
+    }
+    if (!assignedTo) {
+      setError('Please assign to a team member');
       return;
     }
 
-    setIsSubmitting(true);
+    setIsLoading(true);
     setError('');
 
-    try {
-      const formData = new FormData();
-      formData.append('screenshot', file);
-      formData.append('assignedTo', assignedTo);
+    const formData = new FormData();
+    formData.append('screenshot', file);
+    formData.append('Assigned To', assignedTo);
 
+    try {
       await api.post('/leads', formData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+          'Content-Type': 'multipart/form-data',
+        },
       });
-      
       onComplete();
     } catch (err) {
-      console.error(err);
-      setError('Failed to upload lead. Check configuration.');
-      setIsSubmitting(false);
+      console.error('Upload failed', err);
+      setError(err.response?.data?.message || 'Failed to upload lead. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-slide-up">
+        {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-          <h2 className="font-bold text-slate-800 text-lg tracking-tight">Upload Internal Lead</h2>
-          <button 
+          <h3 className="font-bold text-slate-800 text-lg">Upload New Lead</h3>
+          <button
             onClick={onClose}
             className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1.5 rounded-lg transition-colors"
           >
@@ -50,75 +62,79 @@ const LeadUploadModal = ({ onClose, onComplete, uniquePersons = [] }) => {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6">
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-xl text-sm border border-red-100">
-              {error}
-            </div>
-          )}
-
-          <div className="mb-6">
-            <label className="block text-sm font-semibold text-slate-700 mb-2">Screenshot</label>
-            <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 transition cursor-pointer relative">
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={(e) => { setFile(e.target.files[0]); setError(''); }}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* File Upload Area */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider ml-1">Screenshot</label>
+            <div 
+              className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center transition-all cursor-pointer ${file ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 bg-slate-50 hover:border-brand-400 hover:bg-slate-100/50'}`}
+              onClick={() => document.getElementById('screenshot-input').click()}
+            >
+              <input
+                id="screenshot-input"
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
               />
               {file ? (
-                <div className="flex flex-col items-center">
-                  <ImageIcon className="w-10 h-10 text-brand-500 mb-2" />
-                  <span className="text-sm font-medium text-slate-700 text-center max-w-[200px] truncate">{file.name}</span>
-                  <span className="text-xs text-slate-500 mt-1">Click to change</span>
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mb-3">
+                    <CheckCircle className="w-6 h-6 text-emerald-600" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-800 truncate max-w-[200px]">{file.name}</p>
+                  <p className="text-xs text-slate-500 mt-1">{(file.size / 1024).toFixed(1)} KB • Click to change</p>
                 </div>
               ) : (
-                <div className="flex flex-col items-center">
-                  <UploadCloud className="w-10 h-10 text-slate-400 mb-2" />
-                  <span className="text-sm font-medium text-slate-600">Click or drag image here</span>
-                  <span className="text-xs text-slate-400 mt-1">PNG, JPG up to 5MB</span>
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center mb-3 group-hover:bg-brand-100 transition-colors">
+                    <Upload className="w-6 h-6 text-slate-500 group-hover:text-brand-600" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-700">Drop image here</p>
+                  <p className="text-xs text-slate-400 mt-1">or click to browse from files</p>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="mb-6">
-            <label className="block text-sm font-semibold text-slate-700 mb-2">Assign To (Optional)</label>
-            <div className="relative">
-              <select 
-                value={assignedTo}
-                onChange={(e) => setAssignedTo(e.target.value)}
-                className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm appearance-none font-medium text-slate-700"
-              >
-                <option value="">-- Select Member --</option>
-                {uniquePersons.map(p => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-              </div>
-            </div>
+          {/* Assigned To Select */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider ml-1">Assign To</label>
+            <select
+              value={assignedTo}
+              onChange={(e) => setAssignedTo(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-brand-500 font-medium text-slate-800 transition-all shadow-sm"
+            >
+              <option value="">Select a team member...</option>
+              {uniquePersons.map(person => (
+                <option key={person} value={person}>{person}</option>
+              ))}
+            </select>
           </div>
 
-          <div className="flex justify-end gap-3 mt-8">
-            <button 
-              type="button" 
+          {error && (
+            <div className="bg-rose-50 border border-rose-100 text-rose-600 text-xs font-medium p-3 rounded-xl animate-fade-in">
+              {error}
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
               onClick={onClose}
-              className="px-5 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition"
-              disabled={isSubmitting}
+              className="flex-1 px-5 py-3 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
             >
               Cancel
             </button>
-            <button 
-              type="submit" 
-              className="px-5 py-2.5 text-sm font-bold text-white bg-brand-600 rounded-xl hover:bg-brand-700 shadow-md transition flex items-center justify-center min-w-[120px]"
-              disabled={isSubmitting}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="flex-[2] bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl py-3 px-5 shadow-lg shadow-brand-200/50 transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              {isLoading ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
               ) : (
-                'Upload Lead'
+                'Upload & Assign'
               )}
             </button>
           </div>

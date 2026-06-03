@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save } from 'lucide-react';
+import { getTodayIST } from '../utils/dateUtils';
 
 const emptyForm = {
-  "Date of Entry": new Date().toISOString().split('T')[0],
+  "Date of Entry": getTodayIST(),
   "Name of Person": "",
   "Name of property": "",
   "Location": "",
@@ -14,6 +15,13 @@ const emptyForm = {
   "Remarks": "",
   "Details": ""
 };
+
+const SOURCE_OPTIONS = ["Inbound", "Outbound", "Referral", "Internal Lead"];
+const STATUS_OPTIONS = [
+  "Yet to Call", "Called", "Declined", "Pending for QC", "Follow up", 
+  "Live", "Called but didn't answer", "QC Reject", "Not needed", 
+  "Full Details Received", "In draft", "already live"
+];
 
 const InputWrapper = ({ label, error, children }) => (
   <div className="space-y-1 relative">
@@ -45,9 +53,17 @@ const SearchableSelect = ({ value, onChange, options, placeholder, allowCustom =
     // Small delay to allow click on option
     setTimeout(() => {
       setIsOpen(false);
-      if (!allowCustom && !options.includes(search)) {
-        setSearch(value || '');
-      } else if (allowCustom && search !== value) {
+      const exactMatch = options.find(opt => opt.toLowerCase() === search.toLowerCase());
+      if (!allowCustom) {
+        if (exactMatch) {
+          if (exactMatch !== value) {
+            onChange({ target: { name, value: exactMatch } });
+          }
+          setSearch(exactMatch);
+        } else {
+          setSearch(value || '');
+        }
+      } else if (search !== value) {
         onChange({ target: { name, value: search } });
       }
     }, 200);
@@ -131,7 +147,7 @@ const RecordFormModal = ({ record, onClose, onSave, user, uniqueLocations = [], 
          const parts = user.email.split('@')[0];
          defaultPerson = parts.charAt(0).toUpperCase() + parts.slice(1);
       }
-      setFormData({ ...emptyForm, "Date of Entry": new Date().toISOString().split('T')[0], "Name of Person": defaultPerson });
+      setFormData({ ...emptyForm, "Date of Entry": getTodayIST(), "Name of Person": defaultPerson });
     }
   }, [record, user]);
 
@@ -139,6 +155,7 @@ const RecordFormModal = ({ record, onClose, onSave, user, uniqueLocations = [], 
     const newErrors = {};
     if (!formData['Name of Person']) newErrors['Name of Person'] = 'Required';
     if (!formData['Name of property']) newErrors['Name of property'] = 'Required';
+    if (!formData['Location']) newErrors['Location'] = 'Required';
     if (!formData['Date of Entry']) newErrors['Date of Entry'] = 'Required';
     
     // Phone validation
@@ -213,7 +230,8 @@ const RecordFormModal = ({ record, onClose, onSave, user, uniqueLocations = [], 
                  value={formData['Location']}
                  onChange={handleChange}
                  options={uniqueLocations}
-                 allowCustom={true}
+                 allowCustom={false}
+                 placeholder="Search or select location..."
                />
             </InputWrapper>
 
@@ -233,31 +251,25 @@ const RecordFormModal = ({ record, onClose, onSave, user, uniqueLocations = [], 
             </InputWrapper>
 
             <InputWrapper label="Source" error={errors['Source']}>
-              <select name="Source" value={formData['Source']} onChange={handleChange} 
-               className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all appearance-none cursor-pointer">
-                <option value="Inbound">Inbound</option>
-                <option value="Outbound">Outbound</option>
-                <option value="Referral">Referral</option>
-                <option value="Internal Lead">Internal Lead</option>
-              </select>
+               <SearchableSelect 
+                 name="Source"
+                 value={formData['Source']}
+                 onChange={handleChange}
+                 options={SOURCE_OPTIONS}
+                 allowCustom={false}
+                 placeholder="Select source..."
+               />
             </InputWrapper>
 
             <InputWrapper label="Status" error={errors['Status']}>
-              <select name="Status" value={formData['Status']} onChange={handleChange} 
-               className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all appearance-none cursor-pointer">
-                <option value="Yet to Call">Yet to Call</option>
-                <option value="Called">Called</option>
-                <option value="Declined">Declined</option>
-                <option value="Pending for QC">Pending for QC</option>
-                <option value="Follow up">Follow up</option>
-                <option value="Live">Live</option>
-                <option value="Called but didn't answer">Called but didn't answer</option>
-                <option value="QC Reject">QC Reject</option>
-                <option value="Not needed">Not needed</option>
-                <option value="Full Details Received">Full Details Received</option>
-                <option value="In draft">In draft</option>
-                <option value="already live">already live</option>
-              </select>
+               <SearchableSelect 
+                 name="Status"
+                 value={formData['Status']}
+                 onChange={handleChange}
+                 options={STATUS_OPTIONS}
+                 allowCustom={false}
+                 placeholder="Select status..."
+               />
             </InputWrapper>
 
             <div className="md:col-span-2">

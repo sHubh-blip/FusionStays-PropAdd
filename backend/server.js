@@ -8,6 +8,8 @@ const cache = require('./services/cache');
 const authRoutes = require('./controllers/authController');
 const recordsRoutes = require('./controllers/recordsController');
 const leadsRoutes = require('./controllers/leadsController');
+const optionsRoutes = require('./controllers/optionsController');
+const dropdownRoutes = require('./controllers/dropdownController');
 
 const app = express();
 
@@ -36,6 +38,8 @@ app.use(express.json());
 app.use('/api', authRoutes);
 app.use('/api', recordsRoutes);
 app.use('/api', leadsRoutes);
+app.use('/api', optionsRoutes);
+app.use('/api', dropdownRoutes);
 
 // Static files for uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

@@ -11,6 +11,7 @@ import api from '../api';
 import RecordTable from '../components/RecordTable';
 import RecordFormModal from '../components/RecordFormModal';
 import SkeletonTable from '../components/SkeletonTable';
+import { getTodayIST } from '../utils/dateUtils';
 
 const Dashboard = () => {
   const { user, logout } = useContext(AuthContext);
@@ -32,8 +33,12 @@ const Dashboard = () => {
   const [isTeamOpen, setIsTeamOpen] = useState(false);
   const [locationSearch, setLocationSearch] = useState('');
   const [teamSearch, setTeamSearch] = useState('');
-  const [customLocations, setCustomLocations] = useState(() => JSON.parse(localStorage.getItem('customLocations') || '[]'));
-  const [customPersons, setCustomPersons] = useState(() => JSON.parse(localStorage.getItem('customPersons') || '[]'));
+
+  // Clear legacy custom options from localStorage to fix "ghost" values
+  useEffect(() => {
+    localStorage.removeItem('customLocations');
+    localStorage.removeItem('customPersons');
+  }, []);
 
   // Modals
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -114,43 +119,13 @@ const Dashboard = () => {
   };
 
   const uniquePersons = useMemo(() => {
-    return [...new Set([...allRecords.map(r => r["Name of Person"]), ...customPersons].filter(Boolean))].sort();
-  }, [allRecords, customPersons]);
+    return [...new Set(allRecords.map(r => r["Name of Person"]).filter(Boolean))].sort();
+  }, [allRecords]);
 
   const uniqueLocations = useMemo(() => {
-    return [...new Set([...allRecords.map(r => r["Location"]), ...customLocations].filter(Boolean))].sort();
-  }, [allRecords, customLocations]);
+    return [...new Set(allRecords.map(r => r["Location"]).filter(Boolean))].sort();
+  }, [allRecords]);
 
-  const handleAddLocation = (e) => {
-    e.stopPropagation();
-    setPromptConfig({ isOpen: true, type: 'location', title: 'Add New Location', value: '' });
-  };
-
-  const handleAddPerson = (e) => {
-    e.stopPropagation();
-    setPromptConfig({ isOpen: true, type: 'person', title: 'Add New Team Member', value: '' });
-  };
-
-  const handlePromptSubmit = (e) => {
-    e.preventDefault();
-    const val = promptConfig.value.trim();
-    if (val) {
-      if (promptConfig.type === 'location') {
-        setCustomLocations(prev => {
-          const next = [...prev, val];
-          localStorage.setItem('customLocations', JSON.stringify(next));
-          return next;
-        });
-      } else {
-        setCustomPersons(prev => {
-          const next = [...prev, val];
-          localStorage.setItem('customPersons', JSON.stringify(next));
-          return next;
-        });
-      }
-    }
-    setPromptConfig({ isOpen: false, type: '', title: '', value: '' });
-  };
 
   const getPersonCount = (person) => allRecords.filter(r => r["Name of Person"] === person).length;
   const getLocationCount = (loc) => allRecords.filter(r => r["Location"] === loc).length;
@@ -159,7 +134,7 @@ const Dashboard = () => {
     try {
       const apiPayload = { Status: newStatus };
       if (newStatus === 'Live') {
-        apiPayload['Live Date'] = new Date().toISOString().split('T')[0];
+        apiPayload['Live Date'] = getTodayIST();
       }
 
       if (record._id) {
@@ -317,113 +292,24 @@ const Dashboard = () => {
               </button>
             </div>
 
-            {uniqueLocations.length > 0 && (
-              <div className="border border-slate-100 bg-slate-50/50 rounded-2xl overflow-hidden transition-all">
-                <button
-                  onClick={() => setIsLocationsOpen(!isLocationsOpen)}
-                  className="w-full flex justify-between items-center px-4 py-3 bg-white hover:bg-slate-50 transition-colors"
-                >
-                  <div className="flex flex-col items-start gap-1">
-                    <span className="text-sm font-bold text-slate-700">Locations Directory</span>
+            <div className="px-3">
+              <button
+                onClick={() => navigate('/dropdown-manager')}
+                className="w-full flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl text-slate-700 shadow-sm hover:bg-slate-50 transition-all transform hover:-translate-y-1 active:scale-95 group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Plus className="w-6 h-6 text-slate-500" />
                   </div>
-                  <div className="flex items-center space-x-1">
-                    <div
-                      onClick={handleAddLocation}
-                      className="p-1.5 text-brand-600 hover:text-brand-700 hover:bg-brand-50 rounded-lg transition-colors cursor-pointer"
-                      title="Add Location"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </div>
-                    {isLocationsOpen ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronRight className="w-5 h-5 text-slate-400" />}
+                  <div className="text-left">
+                    <div className="text-sm font-bold leading-tight">Dropdown Settings</div>
+                    <div className="text-[10px] text-slate-400 font-medium">Manage options list</div>
                   </div>
-                </button>
+                </div>
+                <ChevronRight className="w-5 h-5 text-slate-300" />
+              </button>
+            </div>
 
-                {isLocationsOpen && (
-                  <div className="p-2 space-y-2 border-t border-slate-100">
-                    <div className="px-2 pb-1 relative group pt-1">
-                      <Search className="w-3.5 h-3.5 absolute left-4 top-3 text-slate-400" />
-                      <input
-                        type="text"
-                        placeholder="Search locations..."
-                        value={locationSearch}
-                        onChange={(e) => setLocationSearch(e.target.value)}
-                        className="w-full text-xs bg-white border border-slate-200 rounded-lg py-2 pl-7 pr-3 focus:outline-none focus:ring-1 focus:ring-brand-500 shadow-sm"
-                      />
-                    </div>
-                    <ul className="space-y-1 max-h-[250px] overflow-y-auto px-1 custom-scrollbar">
-                      {uniqueLocations.filter(loc => loc.toLowerCase().includes(locationSearch.toLowerCase())).map(loc => (
-                        <li key={loc}>
-                          <button
-                            onClick={() => { setLocationFilter(locationFilter === loc ? '' : loc); setIsSidebarOpen(false); }}
-                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all ${locationFilter === loc ? 'bg-brand-50 text-brand-700 font-semibold' : 'text-slate-600 hover:bg-slate-100/50 hover:text-slate-900 font-medium'}`}
-                          >
-                            <div className="flex items-center truncate">
-                              <MapPin className={`w-4 h-4 mr-2.5 flex-shrink-0 ${locationFilter === loc ? 'text-brand-500' : 'text-slate-400'}`} />
-                              <span className="truncate text-xs">{loc}</span>
-                            </div>
-                            <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md">{getLocationCount(loc)}</span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {uniquePersons.length > 0 && (
-              <div className="border border-slate-100 bg-slate-50/50 rounded-2xl overflow-hidden transition-all">
-                <button
-                  onClick={() => setIsTeamOpen(!isTeamOpen)}
-                  className="w-full flex justify-between items-center px-4 py-3 bg-white hover:bg-slate-50 transition-colors"
-                >
-                  <div className="flex flex-col items-start gap-1">
-                    <span className="text-sm font-bold text-slate-700">Team Directory</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <div
-                      onClick={handleAddPerson}
-                      className="p-1.5 text-brand-600 hover:text-brand-700 hover:bg-brand-50 rounded-lg transition-colors cursor-pointer"
-                      title="Add Member"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </div>
-                    {isTeamOpen ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronRight className="w-5 h-5 text-slate-400" />}
-                  </div>
-                </button>
-
-                {isTeamOpen && (
-                  <div className="p-2 space-y-2 border-t border-slate-100">
-                    <div className="px-2 pb-1 relative group pt-1">
-                      <Search className="w-3.5 h-3.5 absolute left-4 top-3 text-slate-400" />
-                      <input
-                        type="text"
-                        placeholder="Search team members..."
-                        value={teamSearch}
-                        onChange={(e) => setTeamSearch(e.target.value)}
-                        className="w-full text-xs bg-white border border-slate-200 rounded-lg py-2 pl-7 pr-3 focus:outline-none focus:ring-1 focus:ring-brand-500 shadow-sm"
-                      />
-                    </div>
-                    <ul className="space-y-1 max-h-[250px] overflow-y-auto px-1 custom-scrollbar">
-                      {uniquePersons.filter(person => person.toLowerCase().includes(teamSearch.toLowerCase())).map(person => (
-                        <li key={person}>
-                          <button
-                            onClick={() => { setPersonFilter(personFilter === person ? '' : person); setIsSidebarOpen(false); }}
-                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all ${personFilter === person ? 'bg-brand-50 text-brand-700 font-semibold' : 'text-slate-600 hover:bg-slate-100/50 hover:text-slate-900 font-medium'}`}
-                          >
-                            <div className="flex items-center truncate">
-                              <Users className={`w-4 h-4 mr-2.5 flex-shrink-0 ${personFilter === person ? 'text-brand-500' : 'text-slate-400'}`} />
-                              <span className="truncate text-xs">{person}</span>
-                            </div>
-                            <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md">{getPersonCount(person)}</span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            )}
 
           </div>
         </aside>
@@ -612,47 +498,6 @@ const Dashboard = () => {
         />
       )}
 
-      {promptConfig.isOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-slide-up">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-              <h3 className="font-bold text-slate-800 tracking-tight">{promptConfig.title}</h3>
-              <button
-                onClick={() => setPromptConfig({ isOpen: false, type: '', title: '', value: '' })}
-                className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1.5 rounded-lg transition-colors"
-                title="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form onSubmit={handlePromptSubmit} className="p-6">
-              <input
-                autoFocus
-                type="text"
-                value={promptConfig.value}
-                onChange={e => setPromptConfig(p => ({ ...p, value: e.target.value }))}
-                placeholder={promptConfig.type === 'location' ? 'e.g. Chicago, IL' : 'e.g. John Doe'}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-brand-500 font-medium text-slate-800 mb-6 transition-all shadow-sm"
-              />
-              <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setPromptConfig({ isOpen: false, type: '', title: '', value: '' })}
-                  className="px-5 py-2.5 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 text-sm font-medium text-white bg-brand-600 rounded-xl hover:bg-brand-700 shadow-md transition-all active:scale-95"
-                >
-                  Save Entry
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

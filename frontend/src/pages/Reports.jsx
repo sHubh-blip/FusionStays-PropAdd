@@ -7,6 +7,13 @@ import {
   Search, RefreshCw, Award, Target, Activity
 } from 'lucide-react';
 import api from '../api';
+import { 
+  getTodayIST, 
+  isInCurrentWeekIST, 
+  isInCurrentMonthIST, 
+  isInCurrentYearIST,
+  normalizeDate
+} from '../utils/dateUtils';
 
 const Reports = () => {
   const { user } = useContext(AuthContext);
@@ -33,27 +40,20 @@ const Reports = () => {
   }, []);
 
   const stats = useMemo(() => {
-    const now = new Date();
-    const today = now.toISOString().split('T')[0];
-
-    const isWithinDays = (dateStr, days) => {
-      if (!dateStr) return false;
-      const d = new Date(dateStr);
-      const diff = (now - d) / (1000 * 60 * 60 * 24);
-      return diff <= days;
-    };
+    const today = getTodayIST();
 
     const filtered = records.filter(r => {
-      const dateStr = r["Date of Entry"];
-      if (!dateStr) return dateFilter === 'all';
+      // THE PRIMARY METRIC IS NOW LIVE PROPERTIES
+      if (r["Status"] !== "Live") return false;
       
-      const d = new Date(dateStr);
-      if (dateFilter === 'today') return dateStr === today;
-      if (dateFilter === 'week') return isWithinDays(dateStr, 7);
-      if (dateFilter === 'month') {
-        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-      }
-      if (dateFilter === 'year') return d.getFullYear() === now.getFullYear();
+      const liveDate = r["Live Date"];
+      if (!liveDate) return dateFilter === 'all';
+      
+      const normalizedLive = normalizeDate(liveDate);
+      if (dateFilter === 'today') return normalizedLive === today;
+      if (dateFilter === 'week') return isInCurrentWeekIST(liveDate);
+      if (dateFilter === 'month') return isInCurrentMonthIST(liveDate);
+      if (dateFilter === 'year') return isInCurrentYearIST(liveDate);
       return true;
     });
 
@@ -66,14 +66,15 @@ const Reports = () => {
         report[member] = { total: 0, lives: 0, locations: {}, lastActive: null };
       }
 
+      // Since we already filtered for Status === "Live", lives and total are the same here
+      // But we'll keep the structure for compatibility
       report[member].total++;
-      if (r["Status"] === "Live") {
-        report[member].lives++;
-      }
+      report[member].lives++;
+      
       report[member].locations[loc] = (report[member].locations[loc] || 0) + 1;
       
-      if (!report[member].lastActive || r["Date of Entry"] > report[member].lastActive) {
-        report[member].lastActive = r["Date of Entry"];
+      if (!report[member].lastActive || r["Live Date"] > report[member].lastActive) {
+        report[member].lastActive = r["Live Date"];
       }
     });
 
@@ -256,7 +257,6 @@ const Reports = () => {
                           </div>
                           <div>
                             <div className="font-bold text-slate-800 text-sm">{name}</div>
-                            <div className="text-[10px] text-slate-400 font-medium uppercase tracking-tight">Joined in 2024</div>
                           </div>
                         </div>
                       </td>

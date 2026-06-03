@@ -3,6 +3,7 @@ const router = express.Router();
 const requireAuth = require('../middleware/auth');
 const { initializeSheets } = require('../services/googleSheets');
 const cache = require('../services/cache');
+const { ensureDropdownValue } = require('../utils/dropdownManager');
 
 const CACHE_KEY = 'all_records';
 
@@ -113,6 +114,15 @@ router.get('/records', requireAuth, async (req, res) => {
 router.post('/records', requireAuth, async (req, res) => {
   try {
     const doc = await initializeSheets();
+    
+    // Auto-register new values in dropdowns before inserting row
+    await Promise.allSettled([
+      req.body["Name of Person"] ? ensureDropdownValue('agent', req.body["Name of Person"]) : null,
+      req.body["Location"]       ? ensureDropdownValue('location', req.body["Location"])   : null,
+      req.body["Source"]         ? ensureDropdownValue('source', req.body["Source"])       : null,
+      req.body["Status"]         ? ensureDropdownValue('status', req.body["Status"])       : null,
+    ]);
+
     const newRecord = {
       "Date of Entry": req.body['Date of Entry'] || '',
       "Name of Person": req.body['Name of Person'] || '',
@@ -149,6 +159,15 @@ router.post('/records', requireAuth, async (req, res) => {
 router.put('/records/:id', requireAuth, async (req, res) => {
   try {
     const doc = await initializeSheets();
+    
+    // Auto-register new values in dropdowns before updating row
+    await Promise.allSettled([
+      req.body["Name of Person"] ? ensureDropdownValue('agent', req.body["Name of Person"]) : null,
+      req.body["Location"]       ? ensureDropdownValue('location', req.body["Location"])   : null,
+      req.body["Source"]         ? ensureDropdownValue('source', req.body["Source"])       : null,
+      req.body["Status"]         ? ensureDropdownValue('status', req.body["Status"])       : null,
+    ]);
+
     const id = req.params.id;
 
     if (!doc) {

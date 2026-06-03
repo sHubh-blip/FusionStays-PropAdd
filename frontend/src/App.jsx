@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import InternalLeads from './pages/InternalLeads';
 import Reports from './pages/Reports';
+import DropdownManager from './pages/DropdownManager';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -52,6 +53,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Reports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dropdown-manager"
+            element={
+              <ProtectedRoute>
+                <DropdownManager />
               </ProtectedRoute>
             }
           />

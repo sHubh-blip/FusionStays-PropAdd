@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   BarChart, Layers, MapPin, Plus, Search, ChevronDown, ChevronRight, 
-  Users, TrendingUp, Calendar, LayoutDashboard, Database, ClipboardList
+  Users, TrendingUp, Calendar, LayoutDashboard, Database, ClipboardList, Settings
 } from 'lucide-react';
 
 const Sidebar = ({ 
@@ -63,6 +63,15 @@ const Sidebar = ({
                 Internal Leads
               </button>
             </li>
+            <li>
+              <button 
+                onClick={() => navigate('/dropdown-manager')}
+                className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all ${isActive('/dropdown-manager') ? 'bg-brand-50 text-brand-700 font-bold shadow-sm border border-brand-100' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'}`}
+              >
+                <Settings className={`w-5 h-5 mr-3 ${isActive('/dropdown-manager') ? 'text-brand-500' : 'text-slate-400'}`} />
+                Dropdown Settings
+              </button>
+            </li>
           </ul>
         </div>
 
@@ -107,39 +116,7 @@ const Sidebar = ({
           )}
         </div>
 
-        {/* Locations Directory */}
-        <div className="border border-slate-100 bg-slate-50/50 rounded-2xl overflow-hidden transition-all">
-          <button 
-            onClick={() => setIsLocationsOpen(!isLocationsOpen)}
-            className="w-full flex justify-between items-center px-4 py-3 bg-white hover:bg-slate-50 transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-slate-400" />
-              <span className="text-sm font-bold text-slate-700">Locations</span>
-            </div>
-            {isLocationsOpen ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
-          </button>
-          {isLocationsOpen && (
-            <div className="p-2 space-y-2 border-t border-slate-100 bg-white">
-              <ul className="space-y-0.5 max-h-[200px] overflow-y-auto px-1 custom-scrollbar">
-                {uniqueLocations.map(loc => (
-                  <li key={loc}>
-                    <button 
-                      onClick={() => {
-                          if (onFilterLocation) onFilterLocation(loc);
-                          if (location.pathname !== '/properties') navigate('/properties');
-                      }}
-                      className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-[11px] transition-all ${activeLocationFilter === loc ? 'bg-brand-50 text-brand-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
-                    >
-                      <span className="truncate">{loc}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
         </div>
-
       </div>
     </aside>
   );
