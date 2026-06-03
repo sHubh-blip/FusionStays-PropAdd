@@ -15,7 +15,7 @@ const InternalLeads = () => {
   const [selectedLead, setSelectedLead] = useState(null);
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
 
-  // We need these for RecordFormModal
+  // For dropdown lists in modals
   const [uniqueLocations, setUniqueLocations] = useState([]);
   const [uniquePersons, setUniquePersons] = useState([]);
 
@@ -33,15 +33,17 @@ const InternalLeads = () => {
 
   const fetchRecordsForDropdowns = async () => {
     try {
-      const { data } = await api.get('/records');
-      if (Array.isArray(data)) {
-        const locs = [...new Set(data.map(r => r["Location"]).filter(Boolean))].sort();
-        const persons = [...new Set(data.map(r => r["Name of Person"]).filter(Boolean))].sort();
-        setUniqueLocations(locs);
-        setUniquePersons(persons);
-      }
+      // Fetch unpaginated records to extract unique locations and persons
+      const response = await api.get('/records?paginate=false');
+      const records = response.data?.data || [];
+      
+      const locs = [...new Set(records.map(r => r["Location"]).filter(Boolean))].sort();
+      const persons = [...new Set(records.map(r => r["Name of Person"]).filter(Boolean))].sort();
+      
+      setUniqueLocations(locs);
+      setUniquePersons(persons);
     } catch (err) {
-      console.error(err);
+      console.error("Failed to fetch dropdown options:", err);
     }
   };
 
@@ -77,22 +79,26 @@ const InternalLeads = () => {
     }
   };
 
-  // Construct correct URL for the image
+  // Safe getImageUrl implementation to prevent crashes
   const getImageUrl = (url) => {
+    if (!url) return '';
     if (url.startsWith('http')) return url;
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
     return apiUrl.replace('/api', '') + url;
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 animate-fade-in">
+    <div className="min-h-screen bg-slate-50 p-4 sm:p-6 lg:p-8 animate-fade-in">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center">
-            <button onClick={() => navigate('/dashboard')} className="mr-4 p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-100 transition">
+            <button onClick={() => navigate('/dashboard')} className="mr-4 p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-100 transition shadow-sm">
               <ChevronLeft className="w-5 h-5 text-slate-600" />
             </button>
-            <h1 className="text-2xl font-bold text-slate-800">Internal Leads (To Be Added)</h1>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-800">Internal Leads</h1>
+              <p className="text-slate-500 text-xs mt-1">Review internal property leads and add them to the main database.</p>
+            </div>
           </div>
           <button
             onClick={() => setIsUploadOpen(true)}
@@ -112,17 +118,18 @@ const InternalLeads = () => {
                 <ImageIcon className="w-8 h-8 text-slate-400" />
               </div>
               <h3 className="text-lg font-bold text-slate-700">No Internal Leads</h3>
-              <p className="text-slate-500 max-w-sm mt-2 text-sm">Upload a screenshot of a potential property and assign it to a team member to get started.</p>
+              <p className="text-slate-500 max-w-sm mt-2 text-sm">Upload a lead with its listing details and assign it to a team member to get started.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase font-semibold tracking-wider">
-                    <th className="py-4 px-6 w-1/5">Date Added</th>
-                    <th className="py-4 px-6 w-1/4">Screenshot</th>
-                    <th className="py-4 px-6 w-1/4">Assigned To</th>
-                    <th className="py-4 px-6 w-[15%]">Status</th>
+                    <th className="py-4 px-6 w-[12%]">Date Added</th>
+                    <th className="py-4 px-6 w-[35%]">Property Details</th>
+                    <th className="py-4 px-6 w-[13%]">Screenshot</th>
+                    <th className="py-4 px-6 w-[15%]">Assigned To</th>
+                    <th className="py-4 px-6 w-[10%]">Status</th>
                     <th className="py-4 px-6 w-[15%] text-right">Actions</th>
                   </tr>
                 </thead>
@@ -131,10 +138,35 @@ const InternalLeads = () => {
                     <tr key={lead._id || lead._rowIndex || idx} className="hover:bg-slate-50/80 transition-colors group">
                       <td className="py-4 px-6 text-sm text-slate-600 font-medium">{lead['Date Added']}</td>
                       <td className="py-4 px-6">
-                        <a href={getImageUrl(lead['Screenshot URL'])} target="_blank" rel="noreferrer" className="inline-flex items-center bg-slate-100 hover:bg-brand-50 text-slate-600 hover:text-brand-600 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors">
-                          <ImageIcon className="w-4 h-4 mr-2" />
-                          View Image
-                        </a>
+                        <div className="flex flex-col gap-1 max-w-[320px]">
+                          <span className="font-bold text-slate-800 text-sm">{lead['Name of Property'] || 'Unnamed Property'}</span>
+                          {lead['Location'] && (
+                            <span className="text-xs text-indigo-600 font-semibold flex items-center gap-1">📍 {lead['Location']}</span>
+                          )}
+                          {lead['Phone Number'] && (
+                            <span className="text-xs text-slate-500 font-semibold flex items-center gap-1">📞 {lead['Phone Number']}</span>
+                          )}
+                          {lead['Link to Property'] && (
+                            <a 
+                              href={lead['Link to Property']} 
+                              target="_blank" 
+                              rel="noreferrer" 
+                              className="text-xs text-brand-600 hover:text-brand-700 underline font-medium truncate max-w-[280px]"
+                            >
+                              🔗 Link to Listing
+                            </a>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-4 px-6">
+                        {lead['Screenshot URL'] ? (
+                          <a href={getImageUrl(lead['Screenshot URL'])} target="_blank" rel="noreferrer" className="inline-flex items-center bg-slate-100 hover:bg-brand-50 text-slate-600 hover:text-brand-600 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">
+                            <ImageIcon className="w-3.5 h-3.5 mr-1.5" />
+                            View Image
+                          </a>
+                        ) : (
+                          <span className="text-slate-400 text-xs italic font-medium">No Image</span>
+                        )}
                       </td>
                       <td className="py-4 px-6 text-sm font-bold text-slate-800">{lead['Assigned To'] || <span className="text-slate-400 font-medium">Unassigned</span>}</td>
                       <td className="py-4 px-6">
@@ -167,12 +199,19 @@ const InternalLeads = () => {
           onClose={() => setIsUploadOpen(false)}
           onComplete={handleUploadComplete}
           uniquePersons={uniquePersons}
+          uniqueLocations={uniqueLocations}
         />
       )}
 
       {isRecordModalOpen && (
         <RecordFormModal
-          record={{ "Source": "Internal Lead" }} // Pre-fill source
+          record={{ 
+            "Source": "Internal Lead",
+            "Name of property": selectedLead?.["Name of Property"] || '',
+            "Location": selectedLead?.["Location"] || '',
+            "Phone Number": selectedLead?.["Phone Number"] || '',
+            "Details": selectedLead?.["Link to Property"] ? `Listing: ${selectedLead["Link to Property"]}` : ''
+          }} // Pre-fill details from lead
           onClose={() => setIsRecordModalOpen(false)}
           onSave={handleRecordSave}
           user={user}
