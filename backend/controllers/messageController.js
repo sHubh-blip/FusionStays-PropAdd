@@ -55,4 +55,21 @@ router.post('/messages', async (req, res) => {
   }
 });
 
+// DELETE /messages/:recipientEmail - clear conversation logs between current user and recipient
+router.delete('/messages/:recipientEmail', async (req, res) => {
+  const senderEmail = req.user.email;
+  const recipientEmail = req.params.recipientEmail;
+
+  if (!recipientEmail) {
+    return res.status(400).json({ message: 'Recipient email is required.' });
+  }
+
+  try {
+    await messageService.clearConversation(senderEmail, recipientEmail);
+    res.json({ message: 'Conversation cleared successfully.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to clear conversation history', error: error.message });
+  }
+});
+
 module.exports = router;

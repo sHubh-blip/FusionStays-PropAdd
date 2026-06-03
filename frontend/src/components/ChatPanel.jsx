@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
-import { MessageSquare, Send, X, ChevronLeft, User, Search, MessageCircle } from 'lucide-react';
+import { MessageSquare, Send, X, ChevronLeft, User, Search, MessageCircle, Trash2 } from 'lucide-react';
 import api from '../api';
 import { AuthContext } from '../context/AuthContext';
 
@@ -168,6 +168,21 @@ const ChatPanel = ({ isOpen, onClose, onUnreadCountChange }) => {
     }
   };
 
+  const handleClearChat = async () => {
+    if (!activeUser) return;
+    const confirmClear = window.confirm(`Are you sure you want to clear your chat history with ${activeUser.email}? This will delete all messages permanently.`);
+    if (!confirmClear) return;
+
+    try {
+      await api.delete(`/messages/${activeUser.email}`);
+      setMessages([]); // Clear local UI messages instantly
+      updateLastSeen(activeUser.email);
+    } catch (error) {
+      console.error('Failed to clear chat:', error);
+      alert('Failed to clear chat. Try again.');
+    }
+  };
+
   // Initial Fetch of users
   useEffect(() => {
     if (isOpen) {
@@ -326,7 +341,7 @@ const ChatPanel = ({ isOpen, onClose, onUnreadCountChange }) => {
                     {getInitials(activeUser.email)}
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-sm font-semibold text-slate-800 truncate max-w-[200px]">{activeUser.email}</span>
+                    <span className="text-sm font-semibold text-slate-800 truncate max-w-[180px]">{activeUser.email}</span>
                     <span className="text-[10px] text-emerald-600 font-medium capitalize flex items-center">
                       <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1 animate-pulse"></span>
                       {activeUser.role}
@@ -346,12 +361,23 @@ const ChatPanel = ({ isOpen, onClose, onUnreadCountChange }) => {
               </div>
             )}
             
-            <button 
-              onClick={onClose} 
-              className="p-1.5 hover:bg-slate-200/70 rounded-lg transition-colors text-slate-400 hover:text-slate-600"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-1">
+              {activeUser && (
+                <button
+                  onClick={handleClearChat}
+                  className="p-1.5 hover:bg-red-50 rounded-lg transition-colors text-slate-400 hover:text-red-500 mr-1"
+                  title="Clear Chat History"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+              <button 
+                onClick={onClose} 
+                className="p-1.5 hover:bg-slate-200/70 rounded-lg transition-colors text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Body Content */}

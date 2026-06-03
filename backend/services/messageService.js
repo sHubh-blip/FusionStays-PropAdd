@@ -128,9 +128,41 @@ async function getAllMessagesForUser(email) {
     .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 }
 
+// Clear conversation between two users
+async function clearConversation(userA, userB) {
+  const emailA = userA.toLowerCase().trim();
+  const emailB = userB.toLowerCase().trim();
+
+  // 1. Remove from in-memory cache instantly
+  messagesCache = messagesCache.filter(m => 
+    !((m.sender === emailA && m.recipient === emailB) || 
+      (m.sender === emailB && m.recipient === emailA))
+  );
+
+  // 2. Asynchronously delete matching rows from Google Sheet in the background
+  getMessageSheet().then(async (sheet) => {
+    if (sheet) {
+      const rows = await sheet.getRows();
+      for (const row of rows) {
+        const s = (row.get('sender') || '').toLowerCase().trim();
+        const r = (row.get('recipient') || '').toLowerCase().trim();
+        if ((s === emailA && r === emailB) || (s === emailB && r === emailA)) {
+          await row.delete();
+        }
+      }
+      console.log(`Successfully cleared messages in sheet between ${emailA} and ${emailB}`);
+    }
+  }).catch(err => {
+    console.error("Failed to delete message rows from Google Sheet:", err.message);
+  });
+
+  return true;
+}
+
 module.exports = {
   initializeMessageHistory,
   getConversation,
   getAllMessagesForUser,
+  clearConversation,
   saveMessage
 };
