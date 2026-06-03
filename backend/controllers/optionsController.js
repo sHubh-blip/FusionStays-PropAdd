@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const requireAuth = require('../middleware/auth');
+const requireRole = require('../middleware/role');
 const { initializeSheets } = require('../services/googleSheets');
 
 // Endpoint to add a new option (Member or Location) to the Google Sheet data validation
-router.post('/options/add', requireAuth, async (req, res) => {
+router.post('/options/add', requireAuth, requireRole(['admin']), async (req, res) => {
   const { type, value } = req.body; // type: 'person' or 'location'
   
   if (!type || !value) {

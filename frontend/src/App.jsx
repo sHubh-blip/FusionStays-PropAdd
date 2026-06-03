@@ -6,9 +6,10 @@ import Dashboard from './pages/Dashboard';
 import InternalLeads from './pages/InternalLeads';
 import Reports from './pages/Reports';
 import DropdownManager from './pages/DropdownManager';
+import UserManagement from './pages/UserManagement';
 
-// Protected Route wrapper
-const ProtectedRoute = ({ children }) => {
+// Protected Route wrapper with role-based restriction
+const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, isLoading } = React.useContext(AuthContext);
 
   if (isLoading) {
@@ -21,6 +22,11 @@ const ProtectedRoute = ({ children }) => {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    // If not authorized, redirect to main dashboard
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;
@@ -59,8 +65,16 @@ function App() {
           <Route
             path="/dropdown-manager"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['admin']}>
                 <DropdownManager />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/user-management"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <UserManagement />
               </ProtectedRoute>
             }
           />
@@ -72,3 +86,4 @@ function App() {
 }
 
 export default App;
+

@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const requireAuth = require('../middleware/auth');
+const requireRole = require('../middleware/role');
 const {
   getAllDropdowns,
   getDropdown,
@@ -39,7 +40,7 @@ router.get('/dropdowns/:column', async (req, res) => {
 
 // ── POST /api/dropdowns/:column/add
 // Add one or more values to a column's dropdown
-router.post('/dropdowns/:column/add', async (req, res) => {
+router.post('/dropdowns/:column/add', requireRole(['admin']), async (req, res) => {
   try {
     const { values } = req.body;
     if (!values) {
@@ -58,7 +59,7 @@ router.post('/dropdowns/:column/add', async (req, res) => {
 
 // ── DELETE /api/dropdowns/:column/delete
 // Remove one or more values from a column's dropdown
-router.delete('/dropdowns/:column/delete', async (req, res) => {
+router.delete('/dropdowns/:column/delete', requireRole(['admin']), async (req, res) => {
   try {
     const { values } = req.body;
     if (!values) {
@@ -77,7 +78,7 @@ router.delete('/dropdowns/:column/delete', async (req, res) => {
 
 // ── PATCH /api/dropdowns/:column/rename
 // Rename an existing value
-router.patch('/dropdowns/:column/rename', async (req, res) => {
+router.patch('/dropdowns/:column/rename', requireRole(['admin']), async (req, res) => {
   try {
     const { oldValue, newValue } = req.body;
     if (!oldValue || !newValue) {

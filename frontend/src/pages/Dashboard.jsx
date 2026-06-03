@@ -292,23 +292,45 @@ const Dashboard = () => {
               </button>
             </div>
 
-            <div className="px-3">
-              <button
-                onClick={() => navigate('/dropdown-manager')}
-                className="w-full flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl text-slate-700 shadow-sm hover:bg-slate-50 transition-all transform hover:-translate-y-1 active:scale-95 group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Plus className="w-6 h-6 text-slate-500" />
-                  </div>
-                  <div className="text-left">
-                    <div className="text-sm font-bold leading-tight">Dropdown Settings</div>
-                    <div className="text-[10px] text-slate-400 font-medium">Manage options list</div>
-                  </div>
+            {user?.role === 'admin' && (
+              <>
+                <div className="px-3">
+                  <button
+                    onClick={() => navigate('/dropdown-manager')}
+                    className="w-full flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl text-slate-700 shadow-sm hover:bg-slate-50 transition-all transform hover:-translate-y-1 active:scale-95 group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Plus className="w-6 h-6 text-slate-500" />
+                      </div>
+                      <div className="text-left">
+                        <div className="text-sm font-bold leading-tight">Dropdown Settings</div>
+                        <div className="text-[10px] text-slate-400 font-medium">Manage options list</div>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-slate-300" />
+                  </button>
                 </div>
-                <ChevronRight className="w-5 h-5 text-slate-300" />
-              </button>
-            </div>
+
+                <div className="px-3">
+                  <button
+                    onClick={() => navigate('/user-management')}
+                    className="w-full flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl text-slate-700 shadow-sm hover:bg-slate-50 transition-all transform hover:-translate-y-1 active:scale-95 group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Users className="w-6 h-6 text-slate-500" />
+                      </div>
+                      <div className="text-left">
+                        <div className="text-sm font-bold leading-tight">User Management</div>
+                        <div className="text-[10px] text-slate-400 font-medium">Manage team accounts</div>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-slate-300" />
+                  </button>
+                </div>
+              </>
+            )}
 
 
           </div>

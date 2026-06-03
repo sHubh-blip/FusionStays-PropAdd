@@ -10,6 +10,7 @@ const recordsRoutes = require('./controllers/recordsController');
 const leadsRoutes = require('./controllers/leadsController');
 const optionsRoutes = require('./controllers/optionsController');
 const dropdownRoutes = require('./controllers/dropdownController');
+const userRoutes = require('./controllers/userController');
 
 const app = express();
 
@@ -40,6 +41,7 @@ app.use('/api', recordsRoutes);
 app.use('/api', leadsRoutes);
 app.use('/api', optionsRoutes);
 app.use('/api', dropdownRoutes);
+app.use('/api', userRoutes);
 
 // Static files for uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -50,6 +52,10 @@ app.get('/health', (req, res) => res.status(200).json({ status: 'ok' }));
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  
+  // Initialize Users Sheet and seed default admin if empty
+  const { getUserSheet } = require('./services/user');
+  getUserSheet().catch(err => console.error("Failed to initialize Users sheet on startup:", err.message));
   
   // Task 4: Background Prefetch Worker
   const { fetchAndMapRecords } = require('./services/sheetService');

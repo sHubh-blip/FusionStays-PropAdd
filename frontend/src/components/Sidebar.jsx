@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 import { 
   BarChart, Layers, MapPin, Plus, Search, ChevronDown, ChevronRight, 
   Users, TrendingUp, Calendar, LayoutDashboard, Database, ClipboardList, Settings
@@ -17,6 +18,7 @@ const Sidebar = ({
   activePersonFilter,
   activeLocationFilter
 }) => {
+  const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
   const [isReportsOpen, setIsReportsOpen] = useState(true);
@@ -63,15 +65,28 @@ const Sidebar = ({
                 Internal Leads
               </button>
             </li>
-            <li>
-              <button 
-                onClick={() => navigate('/dropdown-manager')}
-                className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all ${isActive('/dropdown-manager') ? 'bg-brand-50 text-brand-700 font-bold shadow-sm border border-brand-100' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'}`}
-              >
-                <Settings className={`w-5 h-5 mr-3 ${isActive('/dropdown-manager') ? 'text-brand-500' : 'text-slate-400'}`} />
-                Dropdown Settings
-              </button>
-            </li>
+            {user?.role === 'admin' && (
+              <>
+                <li>
+                  <button 
+                    onClick={() => navigate('/dropdown-manager')}
+                    className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all ${isActive('/dropdown-manager') ? 'bg-brand-50 text-brand-700 font-bold shadow-sm border border-brand-100' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'}`}
+                  >
+                    <Settings className={`w-5 h-5 mr-3 ${isActive('/dropdown-manager') ? 'text-brand-500' : 'text-slate-400'}`} />
+                    Dropdown Settings
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => navigate('/user-management')}
+                    className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all ${isActive('/user-management') ? 'bg-brand-50 text-brand-700 font-bold shadow-sm border border-brand-100' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'}`}
+                  >
+                    <Users className={`w-5 h-5 mr-3 ${isActive('/user-management') ? 'text-brand-500' : 'text-slate-400'}`} />
+                    User Registry
+                  </button>
+                </li>
+              </>
+            )}
           </ul>
         </div>
 

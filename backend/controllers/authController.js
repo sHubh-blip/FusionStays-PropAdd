@@ -1,33 +1,53 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const userService = require('../services/user');
 const router = express.Router();
 
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   const { email, password } = req.body;
-
-  // Use values from .env for MVP
-  const validEmail = process.env.ADMIN_EMAIL || 'admin@fusionstays.com';
-  const validPassword = process.env.ADMIN_PASSWORD || 'admin123';
 
   if (!email || !password) {
     return res.status(400).json({ message: 'Email and password are required.' });
   }
 
-  if (email === validEmail && password === validPassword) {
-    // Determine the secret: use env or fallback
-    const secret = process.env.JWT_SECRET || 'fallback_secret_for_dev_only';
-    
-    // Create token (expires in 8h)
-    const token = jwt.sign({ email }, secret, { expiresIn: '8h' });
-    
-    return res.json({ 
-      message: 'Login successful', 
-      token, 
-      user: { email } 
-    });
-  } else {
-    return res.status(401).json({ message: 'Invalid credentials.' });
+  try {
+    const user = await userService.findUserByEmail(email);
+
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid credentials.' });
+    }
+
+    if (user.status !== 'active') {
+      return res.status(403).json({ message: 'Your account is suspended. Please contact an admin.' });
+    }
+
+    const inputHash = userService.hashPassword(password, user.salt);
+
+    if (inputHash === user.passwordHash) {
+      const secret = process.env.JWT_SECRET || 'fallback_secret_for_dev_only';
+      
+      // Create token including email and role (expires in 8h)
+      const token = jwt.sign(
+        { email: user.email, role: user.role }, 
+        secret, 
+        { expiresIn: '8h' }
+      );
+      
+      return res.json({ 
+        message: 'Login successful', 
+        token, 
+        user: { 
+          email: user.email, 
+          role: user.role 
+        } 
+      });
+    } else {
+      return res.status(401).json({ message: 'Invalid credentials.' });
+    }
+  } catch (error) {
+    return res.status(500).json({ message: 'Login failed due to server error', error: error.message });
   }
 });
 
 module.exports = router;
+
