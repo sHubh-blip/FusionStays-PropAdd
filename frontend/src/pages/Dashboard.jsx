@@ -420,6 +420,20 @@ const Dashboard = () => {
                   <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-3 pointer-events-none" />
                 </div>
 
+                <div className="relative">
+                  <select
+                    value={personFilter}
+                    onChange={(e) => setPersonFilter(e.target.value)}
+                    className="bg-white border border-slate-200 text-slate-600 text-sm font-medium rounded-xl py-2.5 pl-4 pr-10 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm appearance-none transition-colors"
+                  >
+                    <option value="">All Agents</option>
+                    {uniquePersons.map(person => (
+                      <option key={person} value={person}>{person}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-3 pointer-events-none" />
+                </div>
+
                 <button
                   onClick={() => refetch()}
                   className="p-2.5 text-slate-500 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm focus:outline-none flex-shrink-0"
