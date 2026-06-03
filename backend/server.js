@@ -11,6 +11,7 @@ const leadsRoutes = require('./controllers/leadsController');
 const optionsRoutes = require('./controllers/optionsController');
 const dropdownRoutes = require('./controllers/dropdownController');
 const userRoutes = require('./controllers/userController');
+const messageRoutes = require('./controllers/messageController');
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use('/api', leadsRoutes);
 app.use('/api', optionsRoutes);
 app.use('/api', dropdownRoutes);
 app.use('/api', userRoutes);
+app.use('/api', messageRoutes);
 
 // Static files for uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -56,6 +58,10 @@ app.listen(PORT, () => {
   // Initialize Users Sheet and seed default admin if empty
   const { getUserSheet } = require('./services/user');
   getUserSheet().catch(err => console.error("Failed to initialize Users sheet on startup:", err.message));
+  
+  // Initialize Messages Sheet and load history cache
+  const { initializeMessageHistory } = require('./services/messageService');
+  initializeMessageHistory().catch(err => console.error("Failed to initialize message history cache on startup:", err.message));
   
   // Task 4: Background Prefetch Worker
   const { fetchAndMapRecords } = require('./services/sheetService');

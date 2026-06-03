@@ -5,12 +5,13 @@ import { AuthContext } from '../context/AuthContext';
 import { 
   LogOut, Plus, Search, Plane, Home, RefreshCw, Users, MapPin, Layers, 
   Menu, X, ChevronDown, ChevronRight, BarChart, Calendar, TrendingUp,
-  ChevronLeft
+  ChevronLeft, MessageSquare
 } from 'lucide-react';
 import api from '../api';
 import RecordTable from '../components/RecordTable';
 import RecordFormModal from '../components/RecordFormModal';
 import SkeletonTable from '../components/SkeletonTable';
+import ChatPanel from '../components/ChatPanel';
 import { getTodayIST } from '../utils/dateUtils';
 
 const Dashboard = () => {
@@ -44,6 +45,10 @@ const Dashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
   const [promptConfig, setPromptConfig] = useState({ isOpen: false, type: '', title: '', value: '' });
+
+  // Chat State
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Fetch Logic (Task 5)
   const fetchRecords = async ({ page, limit, status, agent, location, search }) => {
@@ -212,7 +217,7 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-end space-x-6 lg:w-[240px] flex-shrink-0">
+            <div className="flex items-center justify-end space-x-4 lg:w-[240px] flex-shrink-0">
               <div className="hidden sm:flex flex-col items-end">
                 <span className="text-sm font-semibold text-slate-700">{user?.email}</span>
                 <div className="flex items-center text-xs text-emerald-600">
@@ -220,6 +225,18 @@ const Dashboard = () => {
                   Online
                 </div>
               </div>
+              <button
+                onClick={() => setIsChatOpen(true)}
+                className="relative text-slate-500 hover:text-brand-600 transition-all flex items-center p-2 rounded-lg hover:bg-slate-100"
+                title="Team Chat"
+              >
+                <MessageSquare className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-0 right-0 bg-brand-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-sm animate-pulse">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
               <button
                 onClick={logout}
                 className="text-slate-500 hover:text-red-500 transition-colors flex items-center p-2 rounded-lg hover:bg-red-50"
@@ -520,6 +537,30 @@ const Dashboard = () => {
         />
       )}
 
+      {/* Floating Chat Button */}
+      <button
+        onClick={() => setIsChatOpen(true)}
+        className="fixed bottom-6 right-6 z-40 bg-brand-600 hover:bg-brand-700 text-white p-4 rounded-full shadow-lg hover:shadow-brand-300 hover:scale-105 active:scale-95 transition-all flex items-center justify-center group"
+        title="Open Team Chat"
+      >
+        <MessageSquare className="w-6 h-6" />
+        {unreadCount > 0 ? (
+          <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-md animate-bounce">
+            {unreadCount}
+          </span>
+        ) : (
+          <span className="absolute right-full mr-2 bg-slate-800 text-white text-xs font-semibold px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-sm">
+            Chat with Team
+          </span>
+        )}
+      </button>
+
+      {/* Slide-out Chat Drawer */}
+      <ChatPanel
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        onUnreadCountChange={setUnreadCount}
+      />
     </div>
   );
 };

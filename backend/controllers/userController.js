@@ -6,10 +6,20 @@ const userService = require('../services/user');
 
 // Apply auth and admin check to all user management routes
 router.use(requireAuth);
-router.use(requireRole(['admin']));
+
+// GET /users/list - list all active users for chat (available to all logged-in users)
+router.get('/users/list', async (req, res) => {
+  try {
+    const users = await userService.listUsers();
+    const activeUsers = users.filter(u => u.status === 'active');
+    res.json(activeUsers);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to retrieve users list', error: error.message });
+  }
+});
 
 // GET /users - list all users
-router.get('/users', async (req, res) => {
+router.get('/users', requireRole(['admin']), async (req, res) => {
   try {
     const users = await userService.listUsers();
     res.json(users);
@@ -19,7 +29,7 @@ router.get('/users', async (req, res) => {
 });
 
 // POST /users - create a new user
-router.post('/users', async (req, res) => {
+router.post('/users', requireRole(['admin']), async (req, res) => {
   const { email, password, role, status } = req.body;
 
   if (!email || !password) {
@@ -40,7 +50,7 @@ router.post('/users', async (req, res) => {
 });
 
 // PUT /users/:email - update a user
-router.put('/users/:email', async (req, res) => {
+router.put('/users/:email', requireRole(['admin']), async (req, res) => {
   const { email } = req.params;
   const { role, status, password } = req.body;
 
@@ -53,7 +63,7 @@ router.put('/users/:email', async (req, res) => {
 });
 
 // DELETE /users/:email - delete a user
-router.delete('/users/:email', async (req, res) => {
+router.delete('/users/:email', requireRole(['admin']), async (req, res) => {
   const { email } = req.params;
 
   try {
