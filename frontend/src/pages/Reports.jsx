@@ -118,6 +118,92 @@ const Reports = () => {
       .sort((a, b) => b[1].total - a[1].total);
   }, [stats.report, searchTerm]);
 
+  const currentMonthName = useMemo(() => {
+    return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(new Date());
+  }, []);
+
+  const agentLiveThisMonth = useMemo(() => {
+    const liveThisMonth = records.filter(r => {
+      if (r["Status"] !== "Live") return false;
+      const liveDate = r["Live Date"];
+      return liveDate && isInCurrentMonthIST(liveDate);
+    });
+
+    const counts = {};
+    liveThisMonth.forEach(r => {
+      const agent = r["Name of Person"] || "Unassigned";
+      counts[agent] = (counts[agent] || 0) + 1;
+    });
+
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1]);
+  }, [records]);
+
+  const locationData = useMemo(() => {
+    const liveThisMonth = records.filter(r => {
+      if (r["Status"] !== "Live") return false;
+      const liveDate = r["Live Date"];
+      return liveDate && isInCurrentMonthIST(liveDate);
+    });
+
+    const counts = {};
+    liveThisMonth.forEach(r => {
+      const loc = r["Location"] || "Unknown Location";
+      counts[loc] = (counts[loc] || 0) + 1;
+    });
+    
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    if (sorted.length <= 5) return sorted;
+    
+    const top5 = sorted.slice(0, 5);
+    const othersCount = sorted.slice(5).reduce((sum, item) => sum + item[1], 0);
+    return [...top5, ['Others', othersCount]];
+  }, [records]);
+
+  const getCoordinatesForPercent = (percent) => {
+    const x = Math.cos(2 * Math.PI * percent);
+    const y = Math.sin(2 * Math.PI * percent);
+    return [x, y];
+  };
+
+  const PIE_COLORS = ['#4f46e5', '#06b6d4', '#f59e0b', '#10b981', '#ec4899', '#64748b'];
+
+  const pieSlices = useMemo(() => {
+    const total = locationData.reduce((sum, item) => sum + item[1], 0);
+    if (total === 0) return [];
+
+    let accumulatedPercent = 0;
+    
+    return locationData.map(([label, val], idx) => {
+      const percent = val / total;
+      const [startX, startY] = getCoordinatesForPercent(accumulatedPercent);
+      accumulatedPercent += percent;
+      const [endX, endY] = getCoordinatesForPercent(accumulatedPercent);
+      
+      const largeArcFlag = percent > 0.5 ? 1 : 0;
+      const r = 80;
+      const x1 = startX * r;
+      const y1 = startY * r;
+      const x2 = endX * r;
+      const y2 = endY * r;
+      
+      let d;
+      if (percent >= 0.999) {
+        d = `M 0 ${-r} A ${r} ${r} 0 1 1 -0.01 ${-r} Z`;
+      } else {
+        d = `M 0 0 L ${x1} ${y1} A ${r} ${r} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
+      }
+      
+      return {
+        d,
+        label,
+        value: val,
+        percentage: Math.round(percent * 100),
+        color: PIE_COLORS[idx % PIE_COLORS.length]
+      };
+    });
+  }, [locationData]);
+
   return (
     <div className="min-h-screen bg-[#f8fafc] flex flex-col font-sans">
       {/* Header */}
@@ -308,50 +394,99 @@ const Reports = () => {
 
         {/* Secondary Insights */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-           <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
-              <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2">
-                <Target className="w-5 h-5 text-brand-600" />
-                Performance Distribution
-              </h3>
-              <div className="space-y-6">
-                {filteredReportEntries.slice(0, 5).map(([name, data]) => (
-                  <div key={name} className="space-y-2">
-                    <div className="flex justify-between items-end">
-                      <span className="text-sm font-bold text-slate-700">{name}</span>
-                      <span className="text-xs font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-lg">{data.total} Properties</span>
-                    </div>
-                    <div className="h-3 bg-slate-50 rounded-full overflow-hidden border border-slate-100">
-                      <div 
-                        className="h-full bg-gradient-to-r from-brand-500 to-indigo-500 rounded-full" 
-                        style={{ width: `${(data.total / (stats.topAgent.count || 1)) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
+           <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between min-h-[350px]">
+              <div>
+                <h3 className="font-bold text-slate-800 mb-2 flex items-center gap-2">
+                  <Target className="w-5 h-5 text-brand-600" />
+                  Monthly Performance Distribution
+                </h3>
+                <p className="text-xs text-slate-500 mb-6">Properties made Live in {currentMonthName}</p>
               </div>
+
+              {agentLiveThisMonth.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-slate-400 h-48">
+                  <BarChart className="w-8 h-8 text-slate-300 mb-2" />
+                  <span className="text-xs font-semibold">No properties made live in {currentMonthName}</span>
+                </div>
+              ) : (
+                <div className="flex items-end justify-between h-48 pt-4 px-2 border-b border-slate-100">
+                  {agentLiveThisMonth.map(([name, count]) => {
+                    const maxVal = Math.max(...agentLiveThisMonth.map(item => item[1]), 1);
+                    const pct = (count / maxVal) * 80;
+                    return (
+                      <div key={name} className="flex flex-col items-center justify-end h-full flex-1 group relative pb-1">
+                        {/* Tooltip */}
+                        <div className="absolute bottom-full mb-2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded shadow-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none">
+                          {count} Live Properties
+                        </div>
+                        
+                        {/* Bar */}
+                        <div 
+                          className="w-8 sm:w-12 bg-gradient-to-t from-indigo-600 to-indigo-400 rounded-t-xl hover:from-indigo-500 hover:to-indigo-300 transition-all duration-500 cursor-pointer shadow-sm group-hover:shadow-md animate-grow-bar"
+                          style={{ height: `${pct}%` }}
+                        />
+                        
+                        {/* Value Label */}
+                        <span className="text-[10px] font-black text-slate-700 mt-1">{count}</span>
+                        
+                        {/* Agent Label */}
+                        <span className="text-[10px] font-bold text-slate-400 truncate max-w-[60px] sm:max-w-[80px] mt-1" title={name}>
+                          {name.split('@')[0]}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
            </div>
 
-           <div className="bg-brand-900 rounded-3xl p-8 text-white relative overflow-hidden shadow-xl flex flex-col justify-between">
-              <div className="relative z-10">
-                <TrendingUp className="w-12 h-12 text-brand-400 mb-6" />
-                <h2 className="text-3xl font-bold mb-4 leading-tight">Database Growth <br/> Insights</h2>
-                <p className="text-brand-200 text-sm max-w-xs mb-8">Your team is growing the property database by an average of 4.2% per week. High demand in {stats.topLocation.name}.</p>
+           <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between min-h-[350px]">
+              <div>
+                <h3 className="font-bold text-slate-800 mb-2 flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-indigo-600" />
+                  Location Distribution
+                </h3>
+                <p className="text-xs text-slate-500 mb-6">Properties made Live in {currentMonthName}</p>
               </div>
               
-              <div className="grid grid-cols-2 gap-4 relative z-10">
-                <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10">
-                  <div className="text-brand-300 text-[10px] font-bold uppercase mb-1">Weekly Target</div>
-                  <div className="text-2xl font-bold">84%</div>
+              {locationData.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-slate-400 h-48">
+                  <MapPin className="w-8 h-8 text-slate-300 mb-2" />
+                  <span className="text-xs font-semibold">No locations data available</span>
                 </div>
-                <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10">
-                  <div className="text-brand-300 text-[10px] font-bold uppercase mb-1">Avg Efficiency</div>
-                  <div className="text-2xl font-bold">9.2</div>
+              ) : (
+                <div className="flex flex-col sm:flex-row items-center gap-6 flex-1">
+                  {/* Pie Chart SVG */}
+                  <div className="relative w-36 h-36 flex-shrink-0 flex items-center justify-center">
+                    <svg viewBox="-100 -100 200 200" className="w-full h-full transform -rotate-90">
+                      {pieSlices.map((slice) => (
+                        <path
+                          key={slice.label}
+                          d={slice.d}
+                          fill={slice.color}
+                          className="hover:opacity-90 hover:scale-105 transition-all duration-300 cursor-pointer origin-center"
+                          title={`${slice.label}: ${slice.value} (${slice.percentage}%)`}
+                        />
+                      ))}
+                    </svg>
+                  </div>
+                  
+                  {/* Legend */}
+                  <div className="flex-1 w-full space-y-2">
+                    {pieSlices.map((slice) => (
+                      <div key={slice.label} className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: slice.color }} />
+                          <span className="font-semibold text-slate-700 truncate" title={slice.label}>{slice.label}</span>
+                        </div>
+                        <span className="font-black text-slate-500 ml-2">
+                          {slice.value} <span className="text-[10px] text-slate-400 font-bold">({slice.percentage}%)</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-
-              {/* Decorative elements */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/20 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
-              <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-500/20 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl"></div>
+              )}
            </div>
         </div>
       </main>
@@ -377,6 +512,14 @@ const Reports = () => {
         .text-brand-400 { color: #818cf8; }
         .from-brand-500 { --tw-gradient-from: #6366f1; --tw-gradient-to: rgb(99 102 241 / 0); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
         .to-indigo-500 { --tw-gradient-to: #6366f1; }
+        @keyframes grow-bar {
+          from { transform: scaleY(0); }
+          to { transform: scaleY(1); }
+        }
+        .animate-grow-bar {
+          transform-origin: bottom;
+          animation: grow-bar 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
       `}} />
     </div>
   );
