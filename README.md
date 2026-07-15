@@ -1,4 +1,4 @@
-# FusionStays-PropAdd  https://fusionstays-propadd-backend.onrender.com
+# FusionStays-PropAdd 
 
 FusionStays-PropAdd is an internal property and client management tool designed for the Property Onboarding Team. It provides a clean, user-friendly frontend interface to efficiently add, edit, and view records, syncing all data directly to a connected Google Sheet via a backend API.
 
@@ -35,7 +35,7 @@ FusionStays-PropAdd is an internal property and client management tool designed 
 3. Build Command: `npm run build`
 4. Output Directory: `dist`
 5. **Environment Variables needed in Vercel:**
-    - `VITE_API_URL`: The URL of your deployed Render backend (e.g., `https://fusionstays-propadd-backend.onrender.com/api`)
+    - `VITE_API_URL`: The URL of your deployed Render backend (e.g., `https://fusionstays-propadd-backend.onrender.com/api`)- https://fusionstays-propadd-backend.onrender.com
 
 ## Local Development Requirements
 - Node.js (v18+)
