@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 import { MoreVertical, Edit2, MapPin } from 'lucide-react';
+import { getTodayIST, normalizeDate } from '../utils/dateUtils';
 
 const statusColors = {
   'Yet to Call': 'bg-[#fbe9e7] text-[#d84315] border-[#ffccbc]',
@@ -31,26 +32,149 @@ const allStatuses = [
   'already live'
 ];
 
-const RecordTable = ({ records, onEdit, onStatusChange, onPersonChange, uniquePersons = [] }) => {
+const RecordTable = ({ 
+  records, 
+  onEdit, 
+  onStatusChange, 
+  onPersonChange, 
+  uniquePersons = [],
+  locationFilter = '',
+  setLocationFilter,
+  statusFilter = '',
+  setStatusFilter,
+  personFilter = '',
+  setPersonFilter,
+  uniqueLocations = [],
+  dateFilter = 'all',
+  setDateFilter,
+  startDate = '',
+  setStartDate,
+  endDate = '',
+  setEndDate
+}) => {
   return (
     <div className="overflow-x-auto w-full">
       <table className="w-full table-fixed text-left border-collapse">
         <thead>
           <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[11px] uppercase tracking-wider font-semibold">
-            <th className="py-2 px-4 w-[22%]">Property / Person</th>
-            <th className="py-2 px-4 w-[14%]">Location</th>
-            <th className="py-2 px-4 w-[22%]">Contact</th>
-            <th className="py-2 px-4 w-[15%]">Status</th>
-            <th className="py-2 px-4 w-[18%]">Dates</th>
-            <th className="py-2 px-4 w-[9%] text-right">Actions</th>
+            <th className="py-2.5 px-4 w-[21%]">
+              <div className="flex items-center justify-between">
+                <span>Property / Person</span>
+                {setPersonFilter && (
+                  <select
+                    value={personFilter}
+                    onChange={(e) => setPersonFilter(e.target.value)}
+                    className="bg-white/80 hover:bg-white text-slate-700 text-[10px] lowercase capitalize font-normal border border-slate-200 rounded px-1 py-0.5 focus:outline-none cursor-pointer"
+                  >
+                    <option value="">Filter Agent</option>
+                    {uniquePersons.map(p => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </th>
+
+            <th className="py-2.5 px-4 w-[15%]">
+              <div className="flex items-center justify-between">
+                <span>Location</span>
+                {setLocationFilter && (
+                  <select
+                    value={locationFilter}
+                    onChange={(e) => setLocationFilter(e.target.value)}
+                    className="bg-white/80 hover:bg-white text-slate-700 text-[10px] font-normal border border-slate-200 rounded px-1 py-0.5 focus:outline-none cursor-pointer"
+                  >
+                    <option value="">All</option>
+                    {uniqueLocations.map(loc => (
+                      <option key={loc} value={loc}>{loc}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </th>
+
+            <th className="py-2.5 px-4 w-[18%]">Contact</th>
+
+            <th className="py-2.5 px-4 w-[16%]">
+              <div className="flex items-center justify-between">
+                <span>Status</span>
+                {setStatusFilter && (
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="bg-white/80 hover:bg-white text-slate-700 text-[10px] font-normal border border-slate-200 rounded px-1 py-0.5 focus:outline-none cursor-pointer"
+                  >
+                    <option value="">All</option>
+                    {allStatuses.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </th>
+
+            <th className="py-2.5 px-4 w-[21%]">
+              <div className="flex items-center justify-between gap-1">
+                <span>Dates</span>
+                {setDateFilter && (
+                  <select
+                    value={dateFilter}
+                    onChange={(e) => {
+                      setDateFilter(e.target.value);
+                      if (e.target.value !== 'custom') {
+                        setStartDate && setStartDate('');
+                        setEndDate && setEndDate('');
+                      }
+                    }}
+                    className="bg-white/80 hover:bg-white text-slate-700 text-[10px] font-normal border border-slate-200 rounded px-1 py-0.5 focus:outline-none cursor-pointer uppercase tracking-tight"
+                  >
+                    <option value="all">All Dates</option>
+                    <option value="today">Today</option>
+                    <option value="week">This Week</option>
+                    <option value="month">This Month</option>
+                    <option value="year">This Year</option>
+                    <option value="custom">Range / Single</option>
+                  </select>
+                )}
+              </div>
+              {(dateFilter === 'custom' || startDate || endDate) && setStartDate && (
+                <div className="flex items-center gap-1 mt-1 font-normal lowercase">
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      setDateFilter && setDateFilter('custom');
+                    }}
+                    title="Start Date / Single Date"
+                    className="bg-white text-slate-700 text-[10px] border border-slate-200 rounded px-1 py-0.5 w-[85px] focus:outline-none"
+                  />
+                  <span className="text-[9px] text-slate-400">to</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => {
+                      setEndDate(e.target.value);
+                      setDateFilter && setDateFilter('custom');
+                    }}
+                    title="End Date"
+                    className="bg-white text-slate-700 text-[10px] border border-slate-200 rounded px-1 py-0.5 w-[85px] focus:outline-none"
+                  />
+                </div>
+              )}
+            </th>
+            <th className="py-2.5 px-4 w-[9%] text-right">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
           {records.map((record, idx) => {
             const statusColor = statusColors[record['Status']] || 'bg-slate-100 text-slate-700 border-slate-200';
+            const isLive = (record['Status'] || '').trim().toLowerCase() === 'live';
+            const liveNormalized = normalizeDate(record['Live Date']);
+            const isLiveToday = isLive && liveNormalized === getTodayIST();
             
             return (
-              <tr key={record._id || record._rowIndex || idx} className="hover:bg-slate-50/80 transition-colors group">
+              <tr key={record._id || record._rowIndex || idx} className={`transition-colors group ${isLiveToday ? 'bg-emerald-50/50 hover:bg-emerald-100/60 border-l-4 border-emerald-500' : 'hover:bg-slate-50/80'}`}>
                 <td className="py-1.5 px-4 align-top">
                   <div className="flex flex-col items-start leading-tight">
                     <span className="font-bold text-slate-900 group-hover:text-brand-600 transition-colors break-words whitespace-normal text-sm">
@@ -112,7 +236,15 @@ const RecordTable = ({ records, onEdit, onStatusChange, onPersonChange, uniquePe
                 <td className="py-1.5 px-4 text-[11px] text-slate-500 align-top">
                   <div className="flex flex-col">
                     <span><span className="text-slate-400 text-xs">Added:</span> {record['Date of Entry'] || '-'}</span>
-                    <span><span className="text-slate-400 text-xs">Live:</span> {record['Live Date'] || '-'}</span>
+                    <span className="flex items-center gap-1">
+                      <span className="text-slate-400 text-xs">Live:</span> 
+                      <span className={isLiveToday ? 'font-bold text-emerald-700' : ''}>{record['Live Date'] || '-'}</span>
+                      {isLiveToday && (
+                        <span className="px-1 py-0.2 text-[9px] font-extrabold bg-emerald-100 text-emerald-800 rounded border border-emerald-300">
+                          TODAY
+                        </span>
+                      )}
+                    </span>
                   </div>
                 </td>
                 

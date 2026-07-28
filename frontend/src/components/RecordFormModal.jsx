@@ -175,13 +175,27 @@ const RecordFormModal = ({ record, onClose, onSave, user, uniqueLocations = [], 
     if (!validate()) return;
     
     setIsSubmitting(true);
-    await onSave(formData);
+    const finalForm = { ...formData };
+    const statusLower = (finalForm['Status'] || '').toLowerCase().trim();
+    if (statusLower === 'live' || statusLower === 'already live') {
+      finalForm['Live Date'] = getTodayIST();
+    }
+    await onSave(finalForm);
     setIsSubmitting(false);
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => {
+      const updated = { ...prev, [name]: value };
+      if (name === 'Status') {
+        const valLower = (value || '').toLowerCase().trim();
+        if (valLower === 'live' || valLower === 'already live') {
+          updated['Live Date'] = getTodayIST();
+        }
+      }
+      return updated;
+    });
     // clear error for that field
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: null }));

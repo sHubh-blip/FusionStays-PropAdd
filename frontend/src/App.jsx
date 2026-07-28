@@ -7,6 +7,8 @@ import InternalLeads from './pages/InternalLeads';
 import Reports from './pages/Reports';
 import DropdownManager from './pages/DropdownManager';
 import UserManagement from './pages/UserManagement';
+import BrowserAgent from './pages/BrowserAgent';
+
 
 // Protected Route wrapper with role-based restriction
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -78,6 +80,15 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/browser-agent"
+            element={
+              <ProtectedRoute>
+                <BrowserAgent />
+              </ProtectedRoute>
+            }
+          />
+
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>

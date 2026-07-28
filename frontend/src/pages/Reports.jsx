@@ -26,7 +26,7 @@ const Reports = () => {
   const fetchRecords = async () => {
     setIsLoading(true);
     try {
-      const { data } = await api.get('/records?paginate=false');
+      const { data } = await api.get(`/records?paginate=false&_t=${Date.now()}`);
       setRecords(Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []));
     } catch (error) {
       console.error('Failed to fetch records', error);
@@ -39,21 +39,59 @@ const Reports = () => {
     fetchRecords();
   }, []);
 
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
+
+  const uniqueLocations = useMemo(() => {
+    return [...new Set(records.map(r => r["Location"]).filter(Boolean))].sort();
+  }, [records]);
+
   const stats = useMemo(() => {
     const today = getTodayIST();
 
     const filtered = records.filter(r => {
-      // THE PRIMARY METRIC IS NOW LIVE PROPERTIES
-      if (r["Status"] !== "Live") return false;
+      // Primary metric: LIVE PROPERTIES (case-insensitive check)
+      const status = (r["Status"] || "").trim().toLowerCase();
+      if (status !== "live" && status !== "already live") return false;
+
+      // Location filter
+      if (locationFilter && (r["Location"] || "").toLowerCase() !== locationFilter.toLowerCase()) {
+        return false;
+      }
       
-      const liveDate = r["Live Date"];
-      if (!liveDate) return dateFilter === 'all';
+      // Get Live Date or fallback to Date of Entry
+      const rawLiveDate = r["Live Date"] || r["Date of Entry"];
       
-      const normalizedLive = normalizeDate(liveDate);
+      // If no date at all, include when no specific date filter or 'all'
+      if (!rawLiveDate) {
+        return dateFilter === 'all' && !startDate && !endDate;
+      }
+      
+      const normalizedLive = normalizeDate(rawLiveDate);
+      
+      // If normalizedLive couldn't be parsed, count it when dateFilter is 'all'
+      if (!normalizedLive) {
+        return dateFilter === 'all' && !startDate && !endDate;
+      }
+
+      // Custom date filter handling (YYYY-MM-DD string comparison)
+      if (startDate || endDate) {
+        if (startDate && endDate) {
+          return normalizedLive >= startDate && normalizedLive <= endDate;
+        }
+        if (startDate) {
+          return normalizedLive === startDate;
+        }
+        if (endDate) {
+          return normalizedLive === endDate;
+        }
+      }
+
       if (dateFilter === 'today') return normalizedLive === today;
-      if (dateFilter === 'week') return isInCurrentWeekIST(liveDate);
-      if (dateFilter === 'month') return isInCurrentMonthIST(liveDate);
-      if (dateFilter === 'year') return isInCurrentYearIST(liveDate);
+      if (dateFilter === 'week') return isInCurrentWeekIST(rawLiveDate);
+      if (dateFilter === 'month') return isInCurrentMonthIST(rawLiveDate);
+      if (dateFilter === 'year') return isInCurrentYearIST(rawLiveDate);
       return true;
     });
 
@@ -66,8 +104,6 @@ const Reports = () => {
         report[member] = { total: 0, lives: 0, locations: {}, lastActive: null };
       }
 
-      // Since we already filtered for Status === "Live", lives and total are the same here
-      // But we'll keep the structure for compatibility
       report[member].total++;
       report[member].lives++;
       
@@ -110,7 +146,7 @@ const Reports = () => {
       topLocation,
       filteredCount: filtered.length
     };
-  }, [records, dateFilter]);
+  }, [records, dateFilter, startDate, endDate, locationFilter]);
 
   const filteredReportEntries = useMemo(() => {
     return Object.entries(stats.report)
@@ -124,9 +160,10 @@ const Reports = () => {
 
   const agentLiveThisMonth = useMemo(() => {
     const liveThisMonth = records.filter(r => {
-      if (r["Status"] !== "Live") return false;
-      const liveDate = r["Live Date"];
-      return liveDate && isInCurrentMonthIST(liveDate);
+      const status = (r["Status"] || "").trim().toLowerCase();
+      if (status !== "live" && status !== "already live") return false;
+      const rawLiveDate = r["Live Date"] || r["Date of Entry"];
+      return rawLiveDate ? isInCurrentMonthIST(rawLiveDate) : true;
     });
 
     const counts = {};
@@ -141,9 +178,10 @@ const Reports = () => {
 
   const locationData = useMemo(() => {
     const liveThisMonth = records.filter(r => {
-      if (r["Status"] !== "Live") return false;
-      const liveDate = r["Live Date"];
-      return liveDate && isInCurrentMonthIST(liveDate);
+      const status = (r["Status"] || "").trim().toLowerCase();
+      if (status !== "live" && status !== "already live") return false;
+      const rawLiveDate = r["Live Date"] || r["Date of Entry"];
+      return rawLiveDate ? isInCurrentMonthIST(rawLiveDate) : true;
     });
 
     const counts = {};
@@ -246,27 +284,93 @@ const Reports = () => {
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-8 animate-fade-in">
         
         {/* Filter Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex flex-wrap gap-2 bg-white p-1 rounded-2xl shadow-sm border border-slate-200 w-fit">
-            {['all', 'today', 'week', 'month', 'year'].map((f) => (
-              <button
-                key={f}
-                onClick={() => setDateFilter(f)}
-                className={`px-4 py-2 rounded-xl text-sm font-bold uppercase tracking-tight transition-all ${dateFilter === f ? 'bg-brand-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap gap-1 bg-slate-100 p-1 rounded-xl">
+              {['all', 'today', 'week', 'month', 'year'].map((f) => (
+                <button
+                  key={f}
+                  onClick={() => {
+                    setDateFilter(f);
+                    setStartDate('');
+                    setEndDate('');
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-tight transition-all ${
+                    dateFilter === f && !startDate && !endDate
+                      ? 'bg-brand-600 text-white shadow-sm'
+                      : 'text-slate-600 hover:bg-slate-200/60'
+                  }`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+
+            {/* Custom Date Filter */}
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+              <Calendar className="w-4 h-4 text-slate-400" />
+              <div className="flex items-center gap-1.5 text-xs text-slate-600">
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    setDateFilter('custom');
+                  }}
+                  className="bg-transparent border-0 text-xs focus:outline-none font-medium cursor-pointer text-slate-700"
+                  title="From Date / Single Date"
+                />
+                <span className="text-slate-400 font-bold">to</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => {
+                    setEndDate(e.target.value);
+                    setDateFilter('custom');
+                  }}
+                  className="bg-transparent border-0 text-xs focus:outline-none font-medium cursor-pointer text-slate-700"
+                  title="To Date (Optional for range)"
+                />
+              </div>
+              {(startDate || endDate) && (
+                <button
+                  onClick={() => {
+                    setStartDate('');
+                    setEndDate('');
+                    setDateFilter('all');
+                  }}
+                  className="text-slate-400 hover:text-slate-600 ml-1 text-xs font-bold"
+                  title="Clear Date Filter"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Location Filter */}
+            <div className="relative">
+              <select
+                value={locationFilter}
+                onChange={(e) => setLocationFilter(e.target.value)}
+                className="bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 py-2 pl-3 pr-8 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer appearance-none"
               >
-                {f}
-              </button>
-            ))}
+                <option value="">All Locations</option>
+                {uniqueLocations.map(loc => (
+                  <option key={loc} value={loc}>{loc}</option>
+                ))}
+              </select>
+              <MapPin className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
           </div>
 
-          <div className="relative w-full md:w-72">
+          <div className="relative w-full lg:w-64">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input 
               type="text"
               placeholder="Search agent..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all shadow-sm"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 pl-9 pr-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all shadow-sm"
             />
           </div>
         </div>

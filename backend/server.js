@@ -12,6 +12,7 @@ const optionsRoutes = require('./controllers/optionsController');
 const dropdownRoutes = require('./controllers/dropdownController');
 const userRoutes = require('./controllers/userController');
 const messageRoutes = require('./controllers/messageController');
+const agentRoutes = require('./controllers/agentController');
 
 const app = express();
 
@@ -44,6 +45,8 @@ app.use('/api', optionsRoutes);
 app.use('/api', dropdownRoutes);
 app.use('/api', userRoutes);
 app.use('/api', messageRoutes);
+app.use('/api', agentRoutes);
+
 
 // Static files for uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

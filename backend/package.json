@@ -11,6 +11,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "cors": "^2.8.6",
     "dotenv": "^17.4.1",
     "express": "^5.2.1",
@@ -19,7 +20,8 @@
     "googleapis": "^171.4.0",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
-    "node-cache": "^5.1.2"
+    "node-cache": "^5.1.2",
+    "puppeteer": "^25.1.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

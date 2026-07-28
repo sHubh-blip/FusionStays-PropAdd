@@ -54,7 +54,7 @@ router.get('/records', requireAuth, async (req, res) => {
     if (!records) {
       const data = await fetchSheetRows();
       records = data.rows;
-      cache.set(CACHE_KEY, records, 60); 
+      cache.set(CACHE_KEY, records, 60);
       fromCache = false;
     }
 
@@ -62,17 +62,17 @@ router.get('/records', requireAuth, async (req, res) => {
     let filteredRecords = [...records];
 
     if (status) {
-      filteredRecords = filteredRecords.filter(r => 
+      filteredRecords = filteredRecords.filter(r =>
         (r["Status"] || "").toLowerCase() === status.toLowerCase()
       );
     }
     if (agent) {
-      filteredRecords = filteredRecords.filter(r => 
+      filteredRecords = filteredRecords.filter(r =>
         (r["Name of Person"] || "").toLowerCase() === agent.toLowerCase()
       );
     }
     if (location) {
-      filteredRecords = filteredRecords.filter(r => 
+      filteredRecords = filteredRecords.filter(r =>
         (r["Location"] || "").toLowerCase().includes(location.toLowerCase())
       );
     }
@@ -85,13 +85,33 @@ router.get('/records', requireAuth, async (req, res) => {
       );
     }
 
+    // 2.5 Server-side sorting
+    if (status && status.toLowerCase() === 'live') {
+      filteredRecords.sort((a, b) => {
+        const dateA = a["Live Date"] || a["Date of Entry"] || "";
+        const dateB = b["Live Date"] || b["Date of Entry"] || "";
+
+        const parseDate = (dStr) => {
+          if (!dStr || dStr === '-') return 0;
+          const parts = dStr.split(/[-/]/);
+          if (parts.length === 3) {
+            const y = parts[2].length === 2 ? '20' + parts[2] : parts[2];
+            return new Date(`${y}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`).getTime();
+          }
+          return 0;
+        };
+
+        return parseDate(dateB) - parseDate(dateA); // descending
+      });
+    }
+
     // 3. Server-side pagination
     const total = filteredRecords.length;
     const totalPages = Math.ceil(total / limit);
     const offset = (Number(page) - 1) * Number(limit);
-    
-    const paginated = paginate === 'false' 
-      ? filteredRecords 
+
+    const paginated = paginate === 'false'
+      ? filteredRecords
       : filteredRecords.slice(offset, offset + Number(limit));
 
     res.setHeader('X-Data-Source', fromCache ? 'cache' : 'sheets');
@@ -110,18 +130,33 @@ router.get('/records', requireAuth, async (req, res) => {
   }
 });
 
+const getTodayISTFormatted = () => {
+  const options = { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' };
+  const parts = new Intl.DateTimeFormat('en-GB', options).formatToParts(new Date());
+  const day = parts.find(p => p.type === 'day').value;
+  const month = parts.find(p => p.type === 'month').value;
+  const year = parts.find(p => p.type === 'year').value;
+  return `${day}/${month}/${year}`;
+};
+
 // POST a new record (Task 3: Invalidation)
 router.post('/records', requireAuth, async (req, res) => {
   try {
     const doc = await initializeSheets();
-    
+
     // Auto-register new values in dropdowns before inserting row
     await Promise.allSettled([
       req.body["Name of Person"] ? ensureDropdownValue('agent', req.body["Name of Person"]) : null,
-      req.body["Location"]       ? ensureDropdownValue('location', req.body["Location"])   : null,
-      req.body["Source"]         ? ensureDropdownValue('source', req.body["Source"])       : null,
-      req.body["Status"]         ? ensureDropdownValue('status', req.body["Status"])       : null,
+      req.body["Location"] ? ensureDropdownValue('location', req.body["Location"]) : null,
+      req.body["Source"] ? ensureDropdownValue('source', req.body["Source"]) : null,
+      req.body["Status"] ? ensureDropdownValue('status', req.body["Status"]) : null,
     ]);
+
+    const isLive = ['live', 'already live'].includes((req.body['Status'] || '').trim().toLowerCase());
+    let liveDate = req.body['Live Date'] || '';
+    if (isLive) {
+      liveDate = getTodayISTFormatted();
+    }
 
     const newRecord = {
       "Date of Entry": req.body['Date of Entry'] || '',
@@ -132,7 +167,7 @@ router.post('/records', requireAuth, async (req, res) => {
       "Source": req.body['Source'] || '',
       "Reason to List": req.body['Reason to List'] || '',
       "Status": req.body['Status'] || '',
-      "Live Date": req.body['Live Date'] || '',
+      "Live Date": liveDate,
       "Remarks": req.body['Remarks'] || '',
       "Details": req.body['Details'] || ''
     };
@@ -140,14 +175,14 @@ router.post('/records', requireAuth, async (req, res) => {
     if (!doc) {
       newRecord._id = "mock" + Date.now();
       mockDatabase.push(newRecord);
-      cache.del(CACHE_KEY); 
+      cache.del(CACHE_KEY);
       return res.status(201).json({ message: 'Record added in Mock Mode', record: newRecord });
     }
 
     const sheet = doc.sheetsByIndex[0];
     const addedRow = await sheet.addRow(newRecord);
     newRecord._rowIndex = addedRow.rowNumber;
-    
+
     cache.del(CACHE_KEY); // Invalidate cache
     res.status(201).json({ message: 'Record added to Google Sheets', record: newRecord });
   } catch (error) {
@@ -159,16 +194,22 @@ router.post('/records', requireAuth, async (req, res) => {
 router.put('/records/:id', requireAuth, async (req, res) => {
   try {
     const doc = await initializeSheets();
-    
+
     // Auto-register new values in dropdowns before updating row
     await Promise.allSettled([
       req.body["Name of Person"] ? ensureDropdownValue('agent', req.body["Name of Person"]) : null,
-      req.body["Location"]       ? ensureDropdownValue('location', req.body["Location"])   : null,
-      req.body["Source"]         ? ensureDropdownValue('source', req.body["Source"])       : null,
-      req.body["Status"]         ? ensureDropdownValue('status', req.body["Status"])       : null,
+      req.body["Location"] ? ensureDropdownValue('location', req.body["Location"]) : null,
+      req.body["Source"] ? ensureDropdownValue('source', req.body["Source"]) : null,
+      req.body["Status"] ? ensureDropdownValue('status', req.body["Status"]) : null,
     ]);
 
     const id = req.params.id;
+    const newStatus = (req.body['Status'] || '').trim().toLowerCase();
+
+    // Every time status is updated to live or already live, set Live Date to present date
+    if (newStatus === 'live' || newStatus === 'already live') {
+      req.body['Live Date'] = getTodayISTFormatted();
+    }
 
     if (!doc) {
       const index = mockDatabase.findIndex(r => r._id === id);
@@ -179,6 +220,9 @@ router.put('/records/:id', requireAuth, async (req, res) => {
     }
 
     const sheet = doc.sheetsByIndex[0];
+    await sheet.loadHeaderRow();
+    const headers = sheet.headerValues;
+
     const rows = await sheet.getRows();
     const rowToUpdate = rows.find(r => r.rowNumber.toString() === id);
 
@@ -186,15 +230,28 @@ router.put('/records/:id', requireAuth, async (req, res) => {
       return res.status(404).json({ message: 'Row not found in Google Sheets' });
     }
 
+    const oldStatus = (rowToUpdate.get('Status') || '').trim().toLowerCase();
+
+    // If status is updated to Live or set to Live without a valid date
+    if (newStatus === 'live') {
+      const existingLiveDate = (req.body['Live Date'] || rowToUpdate.get('Live Date') || '').trim();
+      const isValidDate = existingLiveDate && existingLiveDate !== '-' && /^\d{1,4}[-/]\d{1,2}[-/]\d{1,4}$/.test(existingLiveDate);
+
+      if (oldStatus !== 'live' || !isValidDate || !req.body['Live Date']) {
+        req.body['Live Date'] = getTodayISTFormatted();
+      }
+    }
+
     const updatableFields = [
-      "Date of Entry", "Name of Person", "Name of property", "Location", 
-      "Phone Number", "Source", "Reason to List", "Status", "Live Date", 
+      "Date of Entry", "Name of Person", "Name of property", "Location",
+      "Phone Number", "Source", "Reason to List", "Status", "Live Date",
       "Remarks", "Details"
     ];
 
     updatableFields.forEach(field => {
       if (req.body[field] !== undefined) {
-         rowToUpdate.assign({[field]: req.body[field]});
+        const actualHeader = headers.find(h => h.toLowerCase().trim() === field.toLowerCase().trim()) || field;
+        rowToUpdate.set(actualHeader, req.body[field]);
       }
     });
 

@@ -2,17 +2,17 @@ import React, { useState, useEffect, useContext, useMemo, useCallback } from 're
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AuthContext } from '../context/AuthContext';
-import { 
-  LogOut, Plus, Search, Plane, Home, RefreshCw, Users, MapPin, Layers, 
+import {
+  LogOut, Plus, Search, Plane, Home, RefreshCw, Users, MapPin, Layers,
   Menu, X, ChevronDown, ChevronRight, BarChart, Calendar, TrendingUp,
-  ChevronLeft, MessageSquare
+  ChevronLeft, MessageSquare, Globe
 } from 'lucide-react';
 import api from '../api';
 import RecordTable from '../components/RecordTable';
 import RecordFormModal from '../components/RecordFormModal';
 import SkeletonTable from '../components/SkeletonTable';
 import ChatPanel from '../components/ChatPanel';
-import { getTodayIST } from '../utils/dateUtils';
+import { getTodayIST, normalizeDate } from '../utils/dateUtils';
 
 const Dashboard = () => {
   const { user, logout } = useContext(AuthContext);
@@ -26,6 +26,9 @@ const Dashboard = () => {
   const [personFilter, setPersonFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState('all'); // all, today, week, month, year, custom
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   // UI State
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -66,13 +69,13 @@ const Dashboard = () => {
 
   const { data: recordsData, isLoading, isFetching, isError, error, refetch } = useQuery({
     queryKey: ['records', page, statusFilter, personFilter, locationFilter, search],
-    queryFn: () => fetchRecords({ 
-      page, 
-      limit, 
-      status: statusFilter, 
-      agent: personFilter, 
-      location: locationFilter, 
-      search 
+    queryFn: () => fetchRecords({
+      page,
+      limit,
+      status: statusFilter,
+      agent: personFilter,
+      location: locationFilter,
+      search
     }),
     placeholderData: (prev) => prev,
   });
@@ -138,8 +141,11 @@ const Dashboard = () => {
   const handleStatusChange = useCallback(async (record, newStatus) => {
     try {
       const apiPayload = { Status: newStatus };
-      if (newStatus === 'Live') {
-        apiPayload['Live Date'] = getTodayIST();
+
+      if ((newStatus || '').toLowerCase().trim() === 'live') {
+        const todayStr = getTodayIST(); // YYYY-MM-DD
+        const [y, m, d] = todayStr.split('-');
+        apiPayload['Live Date'] = `${d}/${m}/${y}`;
       }
 
       if (record._id) {
@@ -147,7 +153,11 @@ const Dashboard = () => {
       } else if (record._rowIndex) {
         await api.put(`/records/${record._rowIndex}`, apiPayload);
       }
-      queryClient.invalidateQueries(['records']);
+
+      await Promise.all([
+        queryClient.invalidateQueries(['records']),
+        queryClient.invalidateQueries(['all_records_directory'])
+      ]);
     } catch (error) {
       console.error('Failed to update status', error);
       alert('Failed to update status.');
@@ -288,6 +298,18 @@ const Dashboard = () => {
                     <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md">{allRecords.length}</span>
                   </button>
                 </li>
+                <li>
+                  <button
+                    onClick={() => navigate('/browser-agent')}
+                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium transition-all"
+                  >
+                    <div className="flex items-center">
+                      <Globe className="w-5 h-5 mr-3 text-slate-400" />
+                      AI Browser Agent
+                    </div>
+                    <span className="bg-gradient-to-r from-brand-600 to-indigo-600 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">AI</span>
+                  </button>
+                </li>
               </ul>
             </div>
 
@@ -359,18 +381,27 @@ const Dashboard = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
 
               <div className="flex flex-wrap gap-2 items-center flex-1">
-                <h1 className="text-2xl font-bold text-slate-800 mr-2 sm:mr-4">Database</h1>
-
+                {statusFilter && (
+                  <span className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 shadow-xs animate-fade-in">
+                    Status: {statusFilter}
+                    <button onClick={() => setStatusFilter('')} className="ml-1.5 hover:text-amber-900 focus:outline-none"><X className="w-3.5 h-3.5" /></button>
+                  </span>
+                )}
                 {locationFilter && (
-                  <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-sm animate-fade-in">
+                  <span className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-xs animate-fade-in">
                     Location: {locationFilter}
-                    <button onClick={() => setLocationFilter('')} className="ml-2 hover:text-indigo-900 focus:outline-none"><X className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => setLocationFilter('')} className="ml-1.5 hover:text-indigo-900 focus:outline-none"><X className="w-3.5 h-3.5" /></button>
                   </span>
                 )}
                 {personFilter && (
-                  <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm animate-fade-in">
+                  <span className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs animate-fade-in">
                     Agent: {personFilter}
-                    <button onClick={() => setPersonFilter('')} className="ml-2 hover:text-emerald-900 focus:outline-none"><X className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => setPersonFilter('')} className="ml-1.5 hover:text-emerald-900 focus:outline-none"><X className="w-3.5 h-3.5" /></button>
+                  </span>
+                )}
+                {!statusFilter && !locationFilter && !personFilter && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                    All Database Properties
                   </span>
                 )}
               </div>
@@ -395,43 +426,6 @@ const Dashboard = () => {
                       return [...props, ...locs].map(item => <option key={item} value={item} />);
                     }, [allRecords])}
                   </datalist>
-                </div>
-
-                <div className="relative">
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="bg-white border border-slate-200 text-slate-600 text-sm font-medium rounded-xl py-2.5 pl-4 pr-10 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm appearance-none transition-colors"
-                  >
-                    <option value="">All Statuses</option>
-                    <option value="Yet to Call">Yet to Call</option>
-                    <option value="Called">Called</option>
-                    <option value="Declined">Declined</option>
-                    <option value="Pending for QC">Pending for QC</option>
-                    <option value="Follow up">Follow up</option>
-                    <option value="Live">Live</option>
-                    <option value="Called but didn't answer">Called but didn't answer</option>
-                    <option value="QC Reject">QC Reject</option>
-                    <option value="Not needed">Not needed</option>
-                    <option value="Full Details Received">Full Details Received</option>
-                    <option value="In draft">In draft</option>
-                    <option value="already live">already live</option>
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-3 pointer-events-none" />
-                </div>
-
-                <div className="relative">
-                  <select
-                    value={personFilter}
-                    onChange={(e) => setPersonFilter(e.target.value)}
-                    className="bg-white border border-slate-200 text-slate-600 text-sm font-medium rounded-xl py-2.5 pl-4 pr-10 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm appearance-none transition-colors"
-                  >
-                    <option value="">All Agents</option>
-                    {uniquePersons.map(person => (
-                      <option key={person} value={person}>{person}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-3 pointer-events-none" />
                 </div>
 
                 <button
@@ -493,9 +487,22 @@ const Dashboard = () => {
                       onStatusChange={handleStatusChange}
                       onPersonChange={handlePersonChange}
                       uniquePersons={uniquePersons}
+                      uniqueLocations={uniqueLocations}
+                      locationFilter={locationFilter}
+                      setLocationFilter={setLocationFilter}
+                      statusFilter={statusFilter}
+                      setStatusFilter={setStatusFilter}
+                      personFilter={personFilter}
+                      setPersonFilter={setPersonFilter}
+                      dateFilter={dateFilter}
+                      setDateFilter={setDateFilter}
+                      startDate={startDate}
+                      setStartDate={setStartDate}
+                      endDate={endDate}
+                      setEndDate={setEndDate}
                     />
                   </div>
-                  
+
                   {/* Pagination Controls */}
                   <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/30">
                     <div className="text-sm text-slate-500 font-medium">
