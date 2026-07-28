@@ -21,10 +21,6 @@ const LeadUploadModal = ({ onClose, onComplete, uniquePersons = [], uniqueLocati
       setError('Please select a location');
       return;
     }
-    if (!assignedTo) {
-      setError('Please assign this lead to a team member');
-      return;
-    }
 
     setIsLoading(true);
     setError('');
@@ -34,7 +30,7 @@ const LeadUploadModal = ({ onClose, onComplete, uniquePersons = [], uniqueLocati
     formData.append('Link to Property', linkToProperty.trim());
     formData.append('Phone Number', phoneNumber.trim());
     formData.append('Location', location);
-    formData.append('Assigned To', assignedTo);
+    formData.append('Assigned To', assignedTo || 'Unassigned');
 
     try {
       await api.post('/leads', formData, {
@@ -57,8 +53,8 @@ const LeadUploadModal = ({ onClose, onComplete, uniquePersons = [], uniqueLocati
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-shrink-0">
           <div>
-            <h3 className="font-bold text-slate-800 text-lg">Create & Assign Lead</h3>
-            <p className="text-xs text-slate-500 mt-0.5 font-medium">Input lead details and assign to a team member</p>
+            <h3 className="font-bold text-slate-800 text-lg">Create Lead</h3>
+            <p className="text-xs text-slate-500 mt-0.5 font-medium">Input lead details (assignment is optional)</p>
           </div>
           <button
             onClick={onClose}
@@ -153,18 +149,17 @@ const LeadUploadModal = ({ onClose, onComplete, uniquePersons = [], uniqueLocati
 
           {/* Assigned To Select */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Assign Lead To *</label>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Assign Lead To (Optional)</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                 <UserCheck className="w-4 h-4" />
               </div>
               <select
-                required
                 value={assignedTo}
                 onChange={(e) => setAssignedTo(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-brand-500 rounded-xl py-2.5 pl-10 pr-4 text-sm font-semibold text-slate-800 transition-all focus:outline-none appearance-none"
               >
-                <option value="">Select a team member...</option>
+                <option value="">Unassigned (Optional)</option>
                 {uniquePersons.map(person => (
                   <option key={person} value={person}>{person}</option>
                 ))}

@@ -131,7 +131,7 @@ router.post('/leads', requireAuth, upload.single('screenshot'), async (req, res)
       "Name of Property": req.body['Name of Property'] || '',
       "Link to Property": req.body['Link to Property'] || '',
       "Phone Number": req.body['Phone Number'] || '',
-      "Assigned To": req.body['Assigned To'] || '',
+      "Assigned To": req.body['Assigned To'] || 'Unassigned',
       "Location": req.body['Location'] || '',
       "Status": 'Pending'
     };
@@ -153,15 +153,43 @@ router.post('/leads', requireAuth, upload.single('screenshot'), async (req, res)
   }
 });
 
-// PUT update a lead status
+// PUT update a lead (assignment or status)
 router.put('/leads/:id', requireAuth, async (req, res) => {
   try {
     const doc = await initializeSheets();
     const id = req.params.id;
+    const userRole = (req.user?.role || '').toLowerCase();
+    const userEmail = (req.user?.email || '').toLowerCase();
+    const userUsername = userEmail.split('@')[0];
+
+    // Helper to check if current user is assignee
+    const isAssignee = (assignedToVal) => {
+      if (!assignedToVal) return false;
+      const target = assignedToVal.trim().toLowerCase();
+      if (!target || target === 'unassigned') return false;
+      return target === userEmail || target === userUsername || userEmail.startsWith(target) || target.includes(userUsername);
+    };
 
     if (!doc) {
       const index = mockLeadsDatabase.findIndex(r => r._id === id);
       if (index === -1) return res.status(404).json({ message: 'Mock lead not found' });
+      
+      const currentLead = mockLeadsDatabase[index];
+
+      // Check assignment permission (Admin only)
+      if (req.body['Assigned To'] !== undefined && req.body['Assigned To'] !== currentLead['Assigned To']) {
+        if (userRole !== 'admin') {
+          return res.status(403).json({ message: 'Only admin can assign or reassign leads.' });
+        }
+      }
+
+      // Check status change permission (Admin or Assignee only)
+      if (req.body['Status'] !== undefined && req.body['Status'] !== currentLead['Status']) {
+        if (userRole !== 'admin' && !isAssignee(currentLead['Assigned To'])) {
+          return res.status(403).json({ message: 'Only admin or the assigned team member can update lead status.' });
+        }
+      }
+
       mockLeadsDatabase[index] = { ...mockLeadsDatabase[index], ...req.body };
       return res.json({ message: 'Mock lead updated' });
     }
@@ -172,12 +200,29 @@ router.put('/leads/:id', requireAuth, async (req, res) => {
 
     if (!rowToUpdate) return res.status(404).json({ message: 'Lead not found' });
 
-    if (req.body['Status']) rowToUpdate.assign({ Status: req.body['Status'] });
-    if (req.body['Assigned To']) rowToUpdate.assign({ "Assigned To": req.body['Assigned To'] });
-    if (req.body['Name of Property']) rowToUpdate.assign({ "Name of Property": req.body['Name of Property'] });
-    if (req.body['Link to Property']) rowToUpdate.assign({ "Link to Property": req.body['Link to Property'] });
-    if (req.body['Phone Number']) rowToUpdate.assign({ "Phone Number": req.body['Phone Number'] });
-    if (req.body['Location']) rowToUpdate.assign({ "Location": req.body['Location'] });
+    const currentAssignedTo = rowToUpdate.get('Assigned To') || '';
+    const currentStatus = rowToUpdate.get('Status') || '';
+
+    // Check assignment permission (Admin only)
+    if (req.body['Assigned To'] !== undefined && req.body['Assigned To'] !== currentAssignedTo) {
+      if (userRole !== 'admin') {
+        return res.status(403).json({ message: 'Only admin can assign or reassign leads.' });
+      }
+    }
+
+    // Check status change permission (Admin or Assignee only)
+    if (req.body['Status'] !== undefined && req.body['Status'] !== currentStatus) {
+      if (userRole !== 'admin' && !isAssignee(currentAssignedTo)) {
+        return res.status(403).json({ message: 'Only admin or the assigned team member can update lead status.' });
+      }
+    }
+
+    if (req.body['Status'] !== undefined) rowToUpdate.assign({ Status: req.body['Status'] });
+    if (req.body['Assigned To'] !== undefined) rowToUpdate.assign({ "Assigned To": req.body['Assigned To'] });
+    if (req.body['Name of Property'] !== undefined) rowToUpdate.assign({ "Name of Property": req.body['Name of Property'] });
+    if (req.body['Link to Property'] !== undefined) rowToUpdate.assign({ "Link to Property": req.body['Link to Property'] });
+    if (req.body['Phone Number'] !== undefined) rowToUpdate.assign({ "Phone Number": req.body['Phone Number'] });
+    if (req.body['Location'] !== undefined) rowToUpdate.assign({ "Location": req.body['Location'] });
 
     await rowToUpdate.save();
     res.json({ message: 'Lead updated successfully' });
