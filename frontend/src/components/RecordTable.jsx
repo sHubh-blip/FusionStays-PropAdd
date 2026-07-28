@@ -56,7 +56,7 @@ const RecordTable = ({
     <div className="overflow-x-auto w-full">
       <table className="w-full table-fixed text-left border-collapse">
         <thead>
-          <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[11px] uppercase tracking-wider font-semibold">
+          <tr className="bg-slate-400/70 border-b border-slate-400 text-slate-900 text-[11px] uppercase tracking-wider font-bold">
             <th className="py-2.5 px-4 w-[21%]">
               <div className="flex items-center justify-between">
                 <span>Property / Person</span>
@@ -64,7 +64,7 @@ const RecordTable = ({
                   <select
                     value={personFilter}
                     onChange={(e) => setPersonFilter(e.target.value)}
-                    className="bg-white/80 hover:bg-white text-slate-700 text-[10px] lowercase capitalize font-normal border border-slate-200 rounded px-1 py-0.5 focus:outline-none cursor-pointer"
+                    className="bg-slate-100 hover:bg-white text-slate-800 text-[10px] lowercase capitalize font-semibold border border-slate-300 rounded px-1 py-0.5 focus:outline-none cursor-pointer"
                   >
                     <option value="">Filter Agent</option>
                     {uniquePersons.map(p => (
@@ -82,7 +82,7 @@ const RecordTable = ({
                   <select
                     value={locationFilter}
                     onChange={(e) => setLocationFilter(e.target.value)}
-                    className="bg-white/80 hover:bg-white text-slate-700 text-[10px] font-normal border border-slate-200 rounded px-1 py-0.5 focus:outline-none cursor-pointer"
+                    className="bg-slate-100 hover:bg-white text-slate-800 text-[10px] font-semibold border border-slate-300 rounded px-1 py-0.5 focus:outline-none cursor-pointer"
                   >
                     <option value="">All</option>
                     {uniqueLocations.map(loc => (
@@ -102,7 +102,7 @@ const RecordTable = ({
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="bg-white/80 hover:bg-white text-slate-700 text-[10px] font-normal border border-slate-200 rounded px-1 py-0.5 focus:outline-none cursor-pointer"
+                    className="bg-slate-100 hover:bg-white text-slate-800 text-[10px] font-semibold border border-slate-300 rounded px-1 py-0.5 focus:outline-none cursor-pointer"
                   >
                     <option value="">All</option>
                     {allStatuses.map(s => (
@@ -126,7 +126,7 @@ const RecordTable = ({
                         setEndDate && setEndDate('');
                       }
                     }}
-                    className="bg-white/80 hover:bg-white text-slate-700 text-[10px] font-normal border border-slate-200 rounded px-1 py-0.5 focus:outline-none cursor-pointer uppercase tracking-tight"
+                    className="bg-slate-100 hover:bg-white text-slate-800 text-[10px] font-semibold border border-slate-300 rounded px-1 py-0.5 focus:outline-none cursor-pointer uppercase tracking-tight"
                   >
                     <option value="all">All Dates</option>
                     <option value="today">Today</option>
@@ -147,9 +147,9 @@ const RecordTable = ({
                       setDateFilter && setDateFilter('custom');
                     }}
                     title="Start Date / Single Date"
-                    className="bg-white text-slate-700 text-[10px] border border-slate-200 rounded px-1 py-0.5 w-[85px] focus:outline-none"
+                    className="bg-white text-slate-800 text-[10px] border border-slate-300 rounded px-1 py-0.5 w-[85px] focus:outline-none"
                   />
-                  <span className="text-[9px] text-slate-400">to</span>
+                  <span className="text-[9px] text-slate-500 font-bold">to</span>
                   <input
                     type="date"
                     value={endDate}
@@ -158,7 +158,7 @@ const RecordTable = ({
                       setDateFilter && setDateFilter('custom');
                     }}
                     title="End Date"
-                    className="bg-white text-slate-700 text-[10px] border border-slate-200 rounded px-1 py-0.5 w-[85px] focus:outline-none"
+                    className="bg-white text-slate-800 text-[10px] border border-slate-300 rounded px-1 py-0.5 w-[85px] focus:outline-none"
                   />
                 </div>
               )}
@@ -166,7 +166,7 @@ const RecordTable = ({
             <th className="py-2.5 px-4 w-[9%] text-right">Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody className="divide-y divide-slate-300 bg-slate-200/90 text-slate-900">
           {records.map((record, idx) => {
             const statusColor = statusColors[record['Status']] || 'bg-slate-100 text-slate-700 border-slate-200';
             const isLive = (record['Status'] || '').trim().toLowerCase() === 'live';
@@ -174,7 +174,7 @@ const RecordTable = ({
             const isLiveToday = isLive && liveNormalized === getTodayIST();
             
             return (
-              <tr key={record._id || record._rowIndex || idx} className={`transition-colors group ${isLiveToday ? 'bg-emerald-50/50 hover:bg-emerald-100/60 border-l-4 border-emerald-500' : 'hover:bg-slate-50/80'}`}>
+              <tr key={record._id || record._rowIndex || idx} className={`transition-colors group ${isLiveToday ? 'bg-emerald-100/90 hover:bg-emerald-200/90 border-l-4 border-emerald-600' : 'hover:bg-slate-300/80'}`}>
                 <td className="py-1.5 px-4 align-top">
                   <div className="flex flex-col items-start leading-tight">
                     <span className="font-bold text-slate-900 group-hover:text-brand-600 transition-colors break-words whitespace-normal text-sm">

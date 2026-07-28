@@ -243,37 +243,37 @@ const Reports = () => {
   }, [locationData]);
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-col font-sans">
+    <div className="min-h-screen bg-rose-50/70 flex flex-col font-sans">
       {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
+      <header className="bg-rose-900 border-b border-rose-800 sticky top-0 z-50 shadow-md text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => navigate('/dashboard')}
-              className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-500"
+              className="p-2 hover:bg-rose-800 rounded-xl transition-colors text-rose-200 hover:text-white"
             >
               <ChevronLeft className="w-6 h-6" />
             </button>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-rose-700 rounded-lg flex items-center justify-center border border-rose-600">
                 <BarChart className="w-5 h-5 text-white" />
               </div>
-              <h1 className="text-xl font-bold text-slate-800 tracking-tight">Report Dashboard</h1>
+              <h1 className="text-xl font-bold text-white tracking-tight">Report Dashboard</h1>
             </div>
           </div>
           
           <div className="flex items-center gap-3">
              <button 
                 onClick={fetchRecords}
-                className="p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-all"
+                className="p-2 text-rose-200 hover:text-white hover:bg-rose-800 rounded-xl transition-all"
                 title="Refresh Data"
               >
-                <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin text-brand-500' : ''}`} />
+                <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin text-white' : ''}`} />
               </button>
               <div className="hidden sm:flex flex-col items-end">
-                <span className="text-xs font-bold text-slate-700">{user?.email}</span>
-                <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-wider flex items-center">
-                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5 animate-pulse"></span>
+                <span className="text-xs font-bold text-rose-200">{user?.email}</span>
+                <span className="text-[10px] text-rose-300 font-bold uppercase tracking-wider flex items-center">
+                  <span className="w-1.5 h-1.5 bg-rose-400 rounded-full mr-1.5 animate-pulse"></span>
                   Live Analytics
                 </span>
               </div>
@@ -284,9 +284,9 @@ const Reports = () => {
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-8 animate-fade-in">
         
         {/* Filter Section */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-rose-200/80 shadow-sm">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex flex-wrap gap-1 bg-slate-100 p-1 rounded-xl">
+            <div className="flex flex-wrap gap-1 bg-rose-100/60 p-1 rounded-xl">
               {['all', 'today', 'week', 'month', 'year'].map((f) => (
                 <button
                   key={f}
@@ -297,8 +297,8 @@ const Reports = () => {
                   }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-tight transition-all ${
                     dateFilter === f && !startDate && !endDate
-                      ? 'bg-brand-600 text-white shadow-sm'
-                      : 'text-slate-600 hover:bg-slate-200/60'
+                      ? 'bg-rose-600 text-white shadow-md shadow-rose-200'
+                      : 'text-rose-700 hover:bg-rose-200/70'
                   }`}
                 >
                   {f}
@@ -603,19 +603,19 @@ const Reports = () => {
         .animate-fade-in {
           animation: fade-in 0.6s ease-out forwards;
         }
-        .bg-brand-600 { background-color: #4f46e5; }
-        .text-brand-600 { color: #4f46e5; }
-        .bg-brand-50 { background-color: #eef2ff; }
-        .bg-brand-500 { background-color: #6366f1; }
-        .text-brand-500 { color: #6366f1; }
-        .border-brand-100 { border-color: #e0e7ff; }
-        .bg-brand-100 { background-color: #e0e7ff; }
-        .bg-brand-900 { background-color: #312e81; }
-        .text-brand-200 { color: #c7d2fe; }
-        .text-brand-300 { color: #a5b4fc; }
-        .text-brand-400 { color: #818cf8; }
-        .from-brand-500 { --tw-gradient-from: #6366f1; --tw-gradient-to: rgb(99 102 241 / 0); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
-        .to-indigo-500 { --tw-gradient-to: #6366f1; }
+        .bg-brand-600 { background-color: #e11d48; }
+        .text-brand-600 { color: #e11d48; }
+        .bg-brand-50 { background-color: #fff1f2; }
+        .bg-brand-500 { background-color: #f43f5e; }
+        .text-brand-500 { color: #f43f5e; }
+        .border-brand-100 { border-color: #fecdd3; }
+        .bg-brand-100 { background-color: #ffe4e6; }
+        .bg-brand-900 { background-color: #881337; }
+        .text-brand-200 { color: #fecdd3; }
+        .text-brand-300 { color: #fda4af; }
+        .text-brand-400 { color: #fb7185; }
+        .from-brand-500 { --tw-gradient-from: #f43f5e; --tw-gradient-to: rgb(244 63 94 / 0); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+        .to-indigo-500 { --tw-gradient-to: #e11d48; }
         @keyframes grow-bar {
           from { transform: scaleY(0); }
           to { transform: scaleY(1); }

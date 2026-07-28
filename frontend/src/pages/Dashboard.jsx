@@ -54,7 +54,7 @@ const Dashboard = () => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   // Fetch Logic (Task 5)
-  const fetchRecords = async ({ page, limit, status, agent, location, search }) => {
+  const fetchRecords = async ({ page, limit, status, agent, location, search, dateFilter, startDate, endDate }) => {
     const params = new URLSearchParams({
       page,
       limit,
@@ -62,20 +62,26 @@ const Dashboard = () => {
       ...(agent && { agent }),
       ...(location && { location }),
       ...(search && { search }),
+      ...(dateFilter && dateFilter !== 'all' && { dateFilter }),
+      ...(startDate && { startDate }),
+      ...(endDate && { endDate }),
     });
     const { data } = await api.get(`/records?${params}`);
     return data;
   };
 
   const { data: recordsData, isLoading, isFetching, isError, error, refetch } = useQuery({
-    queryKey: ['records', page, statusFilter, personFilter, locationFilter, search],
+    queryKey: ['records', page, statusFilter, personFilter, locationFilter, search, dateFilter, startDate, endDate],
     queryFn: () => fetchRecords({
       page,
       limit,
       status: statusFilter,
       agent: personFilter,
       location: locationFilter,
-      search
+      search,
+      dateFilter,
+      startDate,
+      endDate
     }),
     placeholderData: (prev) => prev,
   });
@@ -179,29 +185,29 @@ const Dashboard = () => {
   }, [queryClient]);
 
   return (
-    <div className="max-h-screen min-h-screen bg-slate-50 font-sans flex flex-col overflow-hidden">
+    <div className="max-h-screen min-h-screen bg-slate-200 font-sans flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="bg-white border-b border-slate-200 z-50 sticky top-0">
+      <header className="bg-slate-800 border-b border-slate-700 z-50 sticky top-0 shadow-md text-white">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
 
             <div className="flex items-center space-x-3 lg:w-[240px]">
               <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="p-2 text-slate-500 hover:text-brand-600 transition-colors hidden md:block"
+                className="p-2 text-slate-300 hover:text-white transition-colors hidden md:block"
               >
                 {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
               <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="md:hidden p-2 text-slate-500 hover:text-brand-600 transition-colors"
+                className="md:hidden p-2 text-slate-300 hover:text-white transition-colors"
               >
                 {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
-              <div className="w-10 h-10 bg-brand-500 rounded-xl flex items-center justify-center shadow-md">
+              <div className="w-10 h-10 bg-slate-700 rounded-xl flex items-center justify-center shadow-md border border-slate-600">
                 <Plane className="text-white w-6 h-6" />
               </div>
-              <span className="font-bold text-xl text-slate-800 tracking-tight hidden sm:block">Fusionstays</span>
+              <span className="font-bold text-xl text-white tracking-tight hidden sm:block">Fusionstays</span>
             </div>
 
             <div className="flex-1 max-w-xl mx-4 hidden md:block">
@@ -215,7 +221,7 @@ const Dashboard = () => {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search globally by property..."
-                  className="w-full bg-slate-100 border border-transparent rounded-xl py-2 pl-10 pr-4 focus:outline-none focus:bg-white focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
+                  className="w-full bg-slate-700 text-white placeholder-slate-400 border border-slate-600 rounded-xl py-2 pl-10 pr-4 focus:outline-none focus:bg-slate-900 focus:ring-2 focus:ring-slate-500 transition-all"
                 />
                 <datalist id="search-suggestions">
                   {useMemo(() => {
@@ -229,15 +235,15 @@ const Dashboard = () => {
 
             <div className="flex items-center justify-end space-x-4 lg:w-[240px] flex-shrink-0">
               <div className="hidden sm:flex flex-col items-end">
-                <span className="text-sm font-semibold text-slate-700">{user?.email}</span>
-                <div className="flex items-center text-xs text-emerald-600">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
+                <span className="text-sm font-semibold text-slate-200">{user?.email}</span>
+                <div className="flex items-center text-xs text-emerald-400 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span>
                   Online
                 </div>
               </div>
               <button
                 onClick={() => setIsChatOpen(true)}
-                className="relative text-slate-500 hover:text-brand-600 transition-all flex items-center p-2 rounded-lg hover:bg-slate-100"
+                className="relative text-slate-300 hover:text-white hover:bg-slate-700 transition-all flex items-center p-2 rounded-lg"
                 title="Team Chat"
               >
                 <MessageSquare className="w-5 h-5" />
@@ -249,7 +255,7 @@ const Dashboard = () => {
               </button>
               <button
                 onClick={logout}
-                className="text-slate-500 hover:text-red-500 transition-colors flex items-center p-2 rounded-lg hover:bg-red-50"
+                className="text-slate-300 hover:text-rose-400 hover:bg-slate-700 transition-colors flex items-center p-2 rounded-lg"
                 title="Log Out"
               >
                 <LogOut className="w-5 h-5" />
@@ -375,7 +381,7 @@ const Dashboard = () => {
           </div>
         </aside>
 
-        <main className={`flex-1 w-full bg-slate-50/50 p-4 sm:p-6 lg:px-8 lg:py-6 overflow-y-auto h-[calc(100vh-64px)] relative transition-all duration-300 ${isSidebarOpen ? 'lg:pl-80' : 'pl-4'}`}>
+        <main className={`flex-1 w-full bg-slate-200/80 p-4 sm:p-6 lg:px-8 lg:py-6 overflow-y-auto h-[calc(100vh-64px)] relative transition-all duration-300 ${isSidebarOpen ? 'lg:pl-80' : 'pl-4'}`}>
           <div className="w-full">
 
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -452,7 +458,7 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 relative min-h-[500px] flex flex-col">
+            <div className="bg-slate-300 rounded-2xl shadow-md border border-slate-400 relative min-h-[500px] flex flex-col overflow-hidden">
               {isLoading ? (
                 <SkeletonTable rows={10} cols={6} />
               ) : isError ? (
@@ -472,7 +478,15 @@ const Dashboard = () => {
                   <h3 className="text-xl font-bold text-slate-800 mb-2">No properties found</h3>
                   <p className="text-slate-500 max-w-sm mb-6">No records match your active filters.</p>
                   <button
-                    onClick={() => { setSearch(''); setLocationFilter(''); setPersonFilter(''); setStatusFilter(''); }}
+                    onClick={() => {
+                      setSearch('');
+                      setLocationFilter('');
+                      setPersonFilter('');
+                      setStatusFilter('');
+                      setDateFilter('all');
+                      setStartDate('');
+                      setEndDate('');
+                    }}
                     className="text-brand-700 bg-brand-50 py-2.5 px-6 rounded-full font-bold transition-all hover:bg-brand-600 hover:text-white"
                   >
                     Clear All Filters

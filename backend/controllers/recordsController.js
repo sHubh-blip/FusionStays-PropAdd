@@ -44,6 +44,9 @@ router.get('/records', requireAuth, async (req, res) => {
       agent,
       location,
       search,
+      dateFilter,
+      startDate,
+      endDate,
       paginate = 'true'
     } = req.query;
 
@@ -83,6 +86,69 @@ router.get('/records', requireAuth, async (req, res) => {
         (r["Location"] || "").toLowerCase().includes(q) ||
         (r["Name of Person"] || "").toLowerCase().includes(q)
       );
+    }
+
+    if ((dateFilter && dateFilter !== 'all') || startDate || endDate) {
+      const normalizeDateStr = (dStr) => {
+        if (!dStr || dStr === '-') return null;
+        dStr = String(dStr).trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dStr)) return dStr;
+        const parts = dStr.split(/[-/.]/);
+        if (parts.length === 3) {
+          let [p1, p2, p3] = parts;
+          if (p1.length === 4) return `${p1}-${p2.padStart(2, '0')}-${p3.padStart(2, '0')}`;
+          let d = p1, m = p2, y = p3;
+          if (y.length === 2) y = '20' + y;
+          return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+        }
+        return null;
+      };
+
+      // Current Date calculations in IST
+      const now = new Date();
+      const istDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+      const todayIST = istDateStr; // e.g. "2026-07-28"
+
+      // Calculate IST Monday & Sunday strings (YYYY-MM-DD)
+      const [curY, curMStr, curDStr] = istDateStr.split('-');
+      const todayDateObj = new Date(parseInt(curY), parseInt(curMStr) - 1, parseInt(curDStr));
+      const dayOfWeek = todayDateObj.getDay();
+      const diffToMon = todayDateObj.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+      
+      const monDateObj = new Date(todayDateObj);
+      monDateObj.setDate(diffToMon);
+      const monY = monDateObj.getFullYear();
+      const monM = String(monDateObj.getMonth() + 1).padStart(2, '0');
+      const monD = String(monDateObj.getDate()).padStart(2, '0');
+      const mondayStr = `${monY}-${monM}-${monD}`;
+
+      const sunDateObj = new Date(monDateObj);
+      sunDateObj.setDate(monDateObj.getDate() + 6);
+      const sunY = sunDateObj.getFullYear();
+      const sunM = String(sunDateObj.getMonth() + 1).padStart(2, '0');
+      const sunD = String(sunDateObj.getDate()).padStart(2, '0');
+      const sundayStr = `${sunY}-${sunM}-${sunD}`;
+
+      filteredRecords = filteredRecords.filter(r => {
+        const normEntry = normalizeDateStr(r["Date of Entry"]);
+        const normLive = normalizeDateStr(r["Live Date"]);
+        
+        const checkMatch = (norm) => {
+          if (!norm) return false;
+          if (startDate || endDate) {
+            if (startDate && endDate) return norm >= startDate && norm <= endDate;
+            if (startDate) return norm >= startDate;
+            if (endDate) return norm <= endDate;
+          }
+          if (dateFilter === 'today') return norm === todayIST;
+          if (dateFilter === 'week') return norm >= mondayStr && norm <= sundayStr;
+          if (dateFilter === 'month') return norm.startsWith(`${curY}-${curMStr}`);
+          if (dateFilter === 'year') return norm.startsWith(curY);
+          return true;
+        };
+
+        return checkMatch(normEntry) || checkMatch(normLive);
+      });
     }
 
     // 2.5 Server-side sorting
