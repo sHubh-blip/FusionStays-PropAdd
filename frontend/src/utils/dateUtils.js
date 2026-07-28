@@ -86,3 +86,82 @@ export const isInCurrentYearIST = (dateStr) => {
   const currentYear = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', year: 'numeric' }).format(new Date());
   return normalized.startsWith(currentYear);
 };
+
+/**
+ * Get yesterday in IST as YYYY-MM-DD
+ */
+export const getYesterdayIST = () => {
+  const now = new Date();
+  const todayIST = new Date(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata' }).format(now));
+  todayIST.setDate(todayIST.getDate() - 1);
+  const y = todayIST.getFullYear();
+  const m = String(todayIST.getMonth() + 1).padStart(2, '0');
+  const d = String(todayIST.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+/**
+ * Check if a date string is in the previous month in IST
+ */
+export const isInPreviousMonthIST = (dateStr) => {
+  const normalized = normalizeDate(dateStr);
+  if (!normalized) return false;
+  
+  const nowParts = new Intl.DateTimeFormat('en-US', { 
+    timeZone: 'Asia/Kolkata', 
+    year: 'numeric', 
+    month: 'numeric' 
+  }).formatToParts(new Date());
+  
+  const currentMonth = parseInt(nowParts.find(p => p.type === 'month').value, 10);
+  const currentYear = parseInt(nowParts.find(p => p.type === 'year').value, 10);
+  
+  let prevMonth = currentMonth - 1;
+  let prevYear = currentYear;
+  if (prevMonth < 1) {
+    prevMonth = 12;
+    prevYear -= 1;
+  }
+  
+  const [y, m] = normalized.split('-');
+  return parseInt(y, 10) === prevYear && parseInt(m, 10) === prevMonth;
+};
+
+/**
+ * Check if a date string is in the previous calendar week (Mon-Sun) in IST
+ */
+export const isInPreviousWeekIST = (dateStr) => {
+  const normalized = normalizeDate(dateStr);
+  if (!normalized) return false;
+  
+  const now = new Date();
+  const todayIST = new Date(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata' }).format(now));
+  
+  const day = todayIST.getDay(); 
+  const diffToMonday = todayIST.getDate() - day + (day === 0 ? -6 : 1); 
+  
+  const prevMonday = new Date(todayIST);
+  prevMonday.setDate(diffToMonday - 7);
+  prevMonday.setHours(0, 0, 0, 0);
+  
+  const prevSunday = new Date(prevMonday);
+  prevSunday.setDate(prevMonday.getDate() + 6);
+  prevSunday.setHours(23, 59, 59, 999);
+  
+  const checkDate = new Date(normalized + "T00:00:00+05:30");
+  
+  return checkDate >= prevMonday && checkDate <= prevSunday;
+};
+
+/**
+ * Check if a date string is in the previous year in IST
+ */
+export const isInPreviousYearIST = (dateStr) => {
+  const normalized = normalizeDate(dateStr);
+  if (!normalized) return false;
+  
+  const currentYear = parseInt(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', year: 'numeric' }).format(new Date()), 10);
+  const prevYear = String(currentYear - 1);
+  return normalized.startsWith(prevYear);
+};
+

@@ -9,9 +9,13 @@ import {
 import api from '../api';
 import { 
   getTodayIST, 
+  getYesterdayIST,
   isInCurrentWeekIST, 
+  isInPreviousWeekIST,
   isInCurrentMonthIST, 
+  isInPreviousMonthIST,
   isInCurrentYearIST,
+  isInPreviousYearIST,
   normalizeDate
 } from '../utils/dateUtils';
 
@@ -49,43 +53,33 @@ const Reports = () => {
 
   const stats = useMemo(() => {
     const today = getTodayIST();
+    const yesterday = getYesterdayIST();
 
-    const filtered = records.filter(r => {
-      // Primary metric: LIVE PROPERTIES (case-insensitive check)
+    // Primary filtering for live properties matching location filter
+    const liveRecords = records.filter(r => {
       const status = (r["Status"] || "").trim().toLowerCase();
       if (status !== "live" && status !== "already live") return false;
 
-      // Location filter
       if (locationFilter && (r["Location"] || "").toLowerCase() !== locationFilter.toLowerCase()) {
         return false;
       }
-      
-      // Get Live Date or fallback to Date of Entry
-      const rawLiveDate = r["Live Date"] || r["Date of Entry"];
-      
-      // If no date at all, include when no specific date filter or 'all'
+      return true;
+    });
+
+    // Helper to check if a live date is in current selected period
+    const isLiveInCurrentPeriod = (rawLiveDate) => {
       if (!rawLiveDate) {
         return dateFilter === 'all' && !startDate && !endDate;
       }
-      
       const normalizedLive = normalizeDate(rawLiveDate);
-      
-      // If normalizedLive couldn't be parsed, count it when dateFilter is 'all'
       if (!normalizedLive) {
         return dateFilter === 'all' && !startDate && !endDate;
       }
 
-      // Custom date filter handling (YYYY-MM-DD string comparison)
       if (startDate || endDate) {
-        if (startDate && endDate) {
-          return normalizedLive >= startDate && normalizedLive <= endDate;
-        }
-        if (startDate) {
-          return normalizedLive === startDate;
-        }
-        if (endDate) {
-          return normalizedLive === endDate;
-        }
+        if (startDate && endDate) return normalizedLive >= startDate && normalizedLive <= endDate;
+        if (startDate) return normalizedLive === startDate;
+        if (endDate) return normalizedLive === endDate;
       }
 
       if (dateFilter === 'today') return normalizedLive === today;
@@ -93,7 +87,80 @@ const Reports = () => {
       if (dateFilter === 'month') return isInCurrentMonthIST(rawLiveDate);
       if (dateFilter === 'year') return isInCurrentYearIST(rawLiveDate);
       return true;
+    };
+
+    // Helper to check if a live date is in previous period
+    const isLiveInPreviousPeriod = (rawLiveDate) => {
+      if (!rawLiveDate) return false;
+      const normalizedLive = normalizeDate(rawLiveDate);
+      if (!normalizedLive) return false;
+
+      if (startDate || endDate) {
+        if (startDate && endDate) {
+          const startMs = new Date(startDate).getTime();
+          const endMs = new Date(endDate).getTime();
+          const durationDays = Math.max(1, Math.round((endMs - startMs) / (1000 * 60 * 60 * 24)) + 1);
+          
+          const prevEndMs = startMs - 86400000;
+          const prevStartMs = prevEndMs - (durationDays - 1) * 86400000;
+          
+          const prevStartStr = new Date(prevStartMs).toISOString().split('T')[0];
+          const prevEndStr = new Date(prevEndMs).toISOString().split('T')[0];
+          return normalizedLive >= prevStartStr && normalizedLive <= prevEndStr;
+        }
+        if (startDate) {
+          const prevStr = new Date(new Date(startDate).getTime() - 86400000).toISOString().split('T')[0];
+          return normalizedLive === prevStr;
+        }
+        if (endDate) {
+          const prevStr = new Date(new Date(endDate).getTime() - 86400000).toISOString().split('T')[0];
+          return normalizedLive === prevStr;
+        }
+      }
+
+      if (dateFilter === 'today') return normalizedLive === yesterday;
+      if (dateFilter === 'week') return isInPreviousWeekIST(rawLiveDate);
+      if (dateFilter === 'month') return isInPreviousMonthIST(rawLiveDate);
+      if (dateFilter === 'year') return isInPreviousYearIST(rawLiveDate);
+      
+      // Default 'all': compare current month vs previous month
+      return isInPreviousMonthIST(rawLiveDate);
+    };
+
+    const filtered = liveRecords.filter(r => isLiveInCurrentPeriod(r["Live Date"] || r["Date of Entry"]));
+
+    // Previous period records
+    const previousFiltered = liveRecords.filter(r => {
+      const rawLiveDate = r["Live Date"] || r["Date of Entry"];
+      if (dateFilter === 'all' && !startDate && !endDate) {
+        return isInPreviousMonthIST(rawLiveDate);
+      }
+      return isLiveInPreviousPeriod(rawLiveDate);
     });
+
+    // For 'all' filter, count current month additions for percentage comparison
+    const currentMonthCount = (dateFilter === 'all' && !startDate && !endDate)
+      ? liveRecords.filter(r => isInCurrentMonthIST(r["Live Date"] || r["Date of Entry"])).length
+      : filtered.length;
+
+    const previousCount = previousFiltered.length;
+
+    // Helper for percentage formatting
+    const calcTrend = (curr, prev) => {
+      if (prev === 0) {
+        if (curr > 0) return { trend: '+100%', trendUp: true };
+        return { trend: '0%', trendUp: true };
+      }
+      const pct = ((curr - prev) / prev) * 100;
+      const rounded = Math.abs(pct) < 10 ? pct.toFixed(1) : Math.round(pct);
+      const formatted = Number(rounded) === Math.round(rounded) ? Math.round(rounded) : rounded;
+      
+      if (pct > 0) return { trend: `+${formatted}%`, trendUp: true };
+      if (pct < 0) return { trend: `${formatted}%`, trendUp: false };
+      return { trend: '0%', trendUp: true };
+    };
+
+    const propertyTrend = calcTrend(currentMonthCount, previousCount);
 
     const report = {};
     filtered.forEach(r => {
@@ -114,8 +181,12 @@ const Reports = () => {
       }
     });
 
+    const previousActiveAgents = new Set(previousFiltered.map(r => r["Name of Person"] || "Unassigned")).size;
+    const currentActiveAgents = Object.keys(report).length;
+    const agentTrend = calcTrend(currentActiveAgents, previousActiveAgents);
+
     const totalRecords = filtered.length;
-    const activeAgents = Object.keys(report).length;
+    const activeAgents = currentActiveAgents;
     
     // Find top agent based on LIVE status
     let topAgent = { name: 'None', count: 0 };
@@ -144,7 +215,9 @@ const Reports = () => {
       activeAgents,
       topAgent,
       topLocation,
-      filteredCount: filtered.length
+      filteredCount: filtered.length,
+      propertyTrend,
+      agentTrend
     };
   }, [records, dateFilter, startDate, endDate, locationFilter]);
 
@@ -382,14 +455,16 @@ const Reports = () => {
             value={stats.totalRecords} 
             icon={<Home className="w-6 h-6" />} 
             color="blue"
-            trend="+12%"
-            trendUp={true}
+            trend={stats.propertyTrend?.trend}
+            trendUp={stats.propertyTrend?.trendUp}
           />
           <StatCard 
             title="Active Agents" 
             value={stats.activeAgents} 
             icon={<Users className="w-6 h-6" />} 
             color="indigo"
+            trend={stats.agentTrend?.trend}
+            trendUp={stats.agentTrend?.trendUp}
           />
           <StatCard 
             title="Top Performer" 
