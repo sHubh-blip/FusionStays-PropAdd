@@ -5,7 +5,7 @@ const requireRole = require('../middleware/role');
 const { initializeSheets } = require('../services/googleSheets');
 
 // Endpoint to add a new option (Member or Location) to the Google Sheet data validation
-router.post('/options/add', requireAuth, requireRole(['admin']), async (req, res) => {
+router.post('/options/add', requireAuth, async (req, res) => {
   const { type, value } = req.body; // type: 'person' or 'location'
   
   if (!type || !value) {
@@ -24,13 +24,23 @@ router.post('/options/add', requireAuth, requireRole(['admin']), async (req, res
     const columnIndex = type === 'person' ? 1 : 3; // B=1, D=3
     const uniqueValues = new Set();
     
-    // Collect all existing values in that column to maintain the list
+    const trimmedValue = value.trim();
+    const valueLower = trimmedValue.toLowerCase();
+
+    // Collect all existing values in that column to check uniqueness
     for (let i = 1; i < sheet.rowCount; i++) {
       const cellValue = sheet.getCell(i, columnIndex).value;
-      if (cellValue) uniqueValues.add(cellValue.toString().trim());
+      if (cellValue) {
+        const valStr = cellValue.toString().trim();
+        uniqueValues.add(valStr);
+        if (valStr.toLowerCase() === valueLower) {
+          const label = type.charAt(0).toUpperCase() + type.slice(1);
+          return res.status(400).json({ message: `${label} already exists` });
+        }
+      }
     }
     
-    uniqueValues.add(value.trim());
+    uniqueValues.add(trimmedValue);
     const newList = Array.from(uniqueValues).sort();
 
     // Perform batchUpdate to set data validation

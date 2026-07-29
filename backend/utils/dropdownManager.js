@@ -48,29 +48,66 @@ const DROPDOWN_COLUMNS = {
   },
 };
 
+const DEFAULT_FALLBACK_VALUES = {
+  agent: ['AI Browser Agent', 'Barsha', 'Dhanya', 'Sanjana', 'Sarthak', 'Shubhra', 'Shubhradip', 'Zishan'],
+  location: ['Goa', 'North Goa', 'South Goa', 'Mumbai', 'Delhi', 'Bangalore'],
+  source: ['Internal Lead', 'Call', 'Referral', 'Website', 'Direct'],
+  status: ['Yet to Call', 'In Progress', 'Live', 'Drop', 'Closed']
+};
+
 // ── Internal: Read current validation rule for a column ───────
 async function _readCurrentValues(columnKey) {
   const col = DROPDOWN_COLUMNS[columnKey];
   if (!col) throw new Error(`Unknown dropdown column key: "${columnKey}"`);
 
-  const response = await sheetsAPI.spreadsheets.get({
-    spreadsheetId: SPREADSHEET_ID,
-    includeGridData: true,
-    ranges: [
-      `${_colIndexToLetter(col.colIndex)}2`,
-    ],
-    fields: 'sheets.data.rowData.values.dataValidation',
-  });
+  let values = [];
 
-  const rows = response.data.sheets?.[0]?.data?.[0]?.rowData;
-  if (!rows || rows.length === 0) return [];
+  try {
+    const response = await sheetsAPI.spreadsheets.get({
+      spreadsheetId: SPREADSHEET_ID,
+      includeGridData: true,
+      ranges: [
+        `${_colIndexToLetter(col.colIndex)}2`,
+      ],
+      fields: 'sheets.data.rowData.values.dataValidation',
+    });
 
-  const cell = rows[0]?.values?.[0];
-  const conditionValues = cell?.dataValidation?.condition?.values;
+    const rows = response.data.sheets?.[0]?.data?.[0]?.rowData;
+    const cell = rows?.[0]?.values?.[0];
+    const conditionValues = cell?.dataValidation?.condition?.values;
 
-  if (!conditionValues || conditionValues.length === 0) return [];
+    if (conditionValues && conditionValues.length > 0) {
+      values = conditionValues.map(v => v.userEnteredValue).filter(Boolean);
+    }
+  } catch (err) {
+    console.warn(`[DropdownManager] Error reading data validation for ${columnKey}:`, err.message);
+  }
 
-  return conditionValues.map(v => v.userEnteredValue).filter(Boolean);
+  // Always scan spreadsheet rows to include all actual values present in Google Sheet
+  try {
+    const { initializeSheets } = require('../services/googleSheets');
+    const doc = await initializeSheets();
+    if (doc && doc.sheetsByIndex[0]) {
+      const rows = await doc.sheetsByIndex[0].getRows();
+      const headerName = col.label === 'Agent' ? 'Name of Person' : col.label;
+      rows.forEach(r => {
+        const val = r.get(headerName) || r.get(col.label);
+        if (val && val.trim()) {
+          const cleanVal = val.trim();
+          if (cleanVal.toLowerCase() !== col.label.toLowerCase() && cleanVal.toLowerCase() !== 'name of person') {
+            values.push(cleanVal);
+          }
+        }
+      });
+    }
+  } catch (err) {
+    console.warn(`[DropdownManager] Row scan failed for ${columnKey}:`, err.message);
+  }
+
+  // Final Fallback: Predefined defaults merged
+  const defaultList = DEFAULT_FALLBACK_VALUES[columnKey] || [];
+  const merged = [...new Set([...values, ...defaultList])].sort();
+  return merged;
 }
 
 // ── Internal: Write updated list back to the sheet ─────────────
@@ -156,6 +193,11 @@ async function addDropdownValues(columnKey, newValues) {
     } else {
       added.push(val.trim());
     }
+  }
+
+  if (added.length === 0 && skipped.length > 0) {
+    const colLabel = DROPDOWN_COLUMNS[columnKey]?.label || 'Option';
+    throw new Error(`${colLabel} already exists`);
   }
 
   let finalList = current;

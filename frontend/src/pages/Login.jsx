@@ -42,13 +42,13 @@ const Login = () => {
         {/* Top Glass Navbar */}
         <div className="w-full border border-white/30 rounded-full px-4 sm:px-6 py-2.5 bg-white/10 backdrop-blur-md flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-2 sm:gap-3">
-            <button className="bg-teal-500/40 border border-white/30 text-white rounded-full px-4 py-1.5 text-xs sm:text-sm font-medium backdrop-blur-sm transition-all hover:bg-teal-500/50">
+            <button className="bg-red-500/40 border border-white/30 text-white rounded-full px-4 py-1.5 text-xs sm:text-sm font-medium backdrop-blur-sm transition-all hover:bg-red-500/50">
               Home
             </button>
           </div>
           
           <div className="flex items-center gap-2 sm:gap-3">
-            <button className="bg-teal-500/40 border border-white/30 text-white rounded-full px-4 py-1.5 text-xs sm:text-sm font-medium backdrop-blur-sm transition-all hover:bg-teal-500/50">
+            <button className="bg-red-500/40 border border-white/30 text-white rounded-full px-4 py-1.5 text-xs sm:text-sm font-medium backdrop-blur-sm transition-all hover:bg-red-500/50">
               Log in
             </button>
           </div>
@@ -62,14 +62,14 @@ const Login = () => {
             <h1 className="text-4xl sm:text-6xl font-bold tracking-tight drop-shadow-lg leading-tight font-sans">
               FusionStays
             </h1>
-            <p className="text-xl sm:text-2xl italic font-serif text-teal-100/90 drop-shadow-md">
+            <p className="text-xl sm:text-2xl italic font-serif text-red-100/90 drop-shadow-md">
               Property Addition
             </p>
           </div>
 
           {/* Right Glass Login Box */}
           <div className="lg:col-span-6">
-            <div className="backdrop-blur-2xl bg-teal-950/40 border border-white/30 rounded-3xl p-6 sm:p-8 shadow-2xl relative">
+            <div className="backdrop-blur-2xl bg-red-950/40 border border-white/30 rounded-3xl p-6 sm:p-8 shadow-2xl relative">
               
               {/* Header Title */}
               <div className="mb-8 border-b border-white/20 pb-3">
@@ -126,7 +126,7 @@ const Login = () => {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-full py-3.5 px-10 shadow-lg shadow-emerald-950/40 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100 min-w-[140px] text-base"
+                    className="bg-red-600 hover:bg-red-500 text-white font-bold rounded-full py-3.5 px-10 shadow-lg shadow-red-950/40 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100 min-w-[140px] text-base"
                   >
                     {isSubmitting ? (
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mx-auto"></div>

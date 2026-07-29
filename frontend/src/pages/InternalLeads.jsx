@@ -5,12 +5,14 @@ import { ChevronLeft, Plus, Image as ImageIcon, CheckCircle, Clock, Shield, User
 import api from '../api';
 import LeadUploadModal from '../components/LeadUploadModal';
 import RecordFormModal from '../components/RecordFormModal';
+import TeamMemberDashboard from './TeamMemberDashboard';
 
 const LEAD_STATUS_OPTIONS = ['Pending', 'In Progress', 'Contacted', 'Rejected', 'Added'];
 
 const InternalLeads = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
+
   const [leads, setLeads] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
@@ -23,6 +25,7 @@ const InternalLeads = () => {
   const [uniquePersons, setUniquePersons] = useState([]);
 
   const isAdmin = user?.role?.toLowerCase() === 'admin';
+  const isTeamMember = user?.role?.toLowerCase() === 'team_member';
 
   const isAssignee = (assignedToVal) => {
     if (!assignedToVal) return false;
@@ -46,7 +49,11 @@ const InternalLeads = () => {
     setIsLoading(true);
     try {
       const { data } = await api.get('/leads');
-      setLeads(Array.isArray(data) ? data : []);
+      const allLeads = Array.isArray(data) ? data : [];
+      const userRole = user?.role?.toLowerCase();
+      const isFullAccess = userRole === 'admin' || userRole === 'team_member';
+      const visibleLeads = isFullAccess ? allLeads : allLeads.filter(lead => isAssignee(lead['Assigned To']));
+      setLeads(visibleLeads);
     } catch (error) {
       console.error('Failed to fetch leads', error);
     } finally {
@@ -56,12 +63,35 @@ const InternalLeads = () => {
 
   const fetchRecordsForDropdowns = async () => {
     try {
-      const response = await api.get('/records?paginate=false');
-      const records = response.data?.data || [];
-      
-      const locs = [...new Set(records.map(r => r["Location"]).filter(Boolean))].sort();
-      const persons = [...new Set(records.map(r => r["Name of Person"]).filter(Boolean))].sort();
-      
+      const [recordsRes, dropdownsRes, usersRes] = await Promise.all([
+        api.get('/records?paginate=false').catch(() => ({ data: { data: [] } })),
+        api.get('/dropdowns').catch(() => ({ data: { dropdowns: {} } })),
+        api.get('/users/list').catch(() => ({ data: [] }))
+      ]);
+
+      const records = recordsRes.data?.data || [];
+      const dropdowns = dropdownsRes.data?.dropdowns || {};
+      const users = usersRes.data || [];
+
+      const recordPersons = records.map(r => r["Name of Person"]).filter(Boolean);
+      const dropdownPersons = dropdowns.agent?.values || [];
+      const userPersons = users.map(u => {
+        if (u.name && u.name.trim()) return u.name.trim();
+        const userPart = u.email ? u.email.split('@')[0] : '';
+        return userPart ? userPart.charAt(0).toUpperCase() + userPart.slice(1) : '';
+      }).filter(Boolean);
+
+      const recordLocs = records.map(r => r["Location"]).filter(Boolean);
+      const dropdownLocs = dropdowns.location?.values || [];
+
+      const persons = [...new Set([...recordPersons, ...dropdownPersons, ...userPersons])]
+        .filter(n => n.toLowerCase() !== 'agent')
+        .sort();
+
+      const locs = [...new Set([...recordLocs, ...dropdownLocs])]
+        .filter(l => l.toLowerCase() !== 'location')
+        .sort();
+
       setUniqueLocations(locs);
       setUniquePersons(persons);
     } catch (err) {
@@ -72,6 +102,9 @@ const InternalLeads = () => {
   useEffect(() => {
     fetchLeads();
     fetchRecordsForDropdowns();
+    if (window.location.search.includes('create=true')) {
+      setIsUploadOpen(true);
+    }
   }, []);
 
   const handleUploadComplete = () => {
@@ -147,8 +180,9 @@ const InternalLeads = () => {
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center">
-            <button onClick={() => navigate('/dashboard')} className="mr-4 p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-100 transition shadow-sm">
-              <ChevronLeft className="w-5 h-5 text-slate-600" />
+            <button onClick={() => navigate('/dashboard')} className="mr-4 p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-100 transition shadow-sm flex items-center gap-1.5 text-xs font-bold text-slate-700 px-3">
+              <ChevronLeft className="w-4 h-4 text-slate-600" />
+              <span>Dashboard</span>
             </button>
             <div>
               <div className="flex items-center gap-2">
@@ -158,8 +192,13 @@ const InternalLeads = () => {
                     <Shield className="w-3 h-3" /> Admin Mode
                   </span>
                 )}
+                {isTeamMember && (
+                  <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-md border border-amber-200">
+                    Team Member
+                  </span>
+                )}
               </div>
-              <p className="text-slate-500 text-xs mt-1">Review internal property leads and manage assignments.</p>
+              <p className="text-slate-500 text-xs mt-1">Review internal property leads and create new submissions.</p>
             </div>
           </div>
           <button
@@ -167,7 +206,7 @@ const InternalLeads = () => {
             className="bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl py-2.5 px-5 shadow-md flex items-center transition-all transform hover:-translate-y-0.5 active:translate-y-0 text-sm"
           >
             <Plus className="w-4 h-4 mr-2" />
-            Submit Internal Lead
+            Create Lead
           </button>
         </div>
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save } from 'lucide-react';
+import { X, Save, Plus } from 'lucide-react';
 import { getTodayIST } from '../utils/dateUtils';
+import api from '../api';
 
 const emptyForm = {
   "Date of Entry": getTodayIST(),
@@ -112,6 +113,73 @@ const RecordFormModal = ({ record, onClose, onSave, user, uniqueLocations = [], 
   const [formData, setFormData] = useState(emptyForm);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [locationsList, setLocationsList] = useState(uniqueLocations);
+  const [sourcesList, setSourcesList] = useState(SOURCE_OPTIONS);
+
+  const [showAddLocation, setShowAddLocation] = useState(false);
+  const [newLocationInput, setNewLocationInput] = useState('');
+  const [isAddingLocation, setIsAddingLocation] = useState(false);
+
+  const [showAddSource, setShowAddSource] = useState(false);
+  const [newSourceInput, setNewSourceInput] = useState('');
+  const [isAddingSource, setIsAddingSource] = useState(false);
+
+  useEffect(() => {
+    if (uniqueLocations.length) {
+      setLocationsList(uniqueLocations);
+    }
+  }, [uniqueLocations]);
+
+  const handleAddNewLocation = async (e) => {
+    e.preventDefault();
+    if (!newLocationInput.trim()) return;
+    const val = newLocationInput.trim();
+    if (locationsList.some(l => l.toLowerCase().trim() === val.toLowerCase())) {
+      alert('Location already exists');
+      return;
+    }
+    setIsAddingLocation(true);
+    try {
+      await api.post('/options/add', { type: 'location', value: val });
+      if (!locationsList.includes(val)) {
+        setLocationsList(prev => [...prev, val].sort());
+      }
+      setFormData(prev => ({ ...prev, Location: val }));
+      setNewLocationInput('');
+      setShowAddLocation(false);
+    } catch (err) {
+      console.error('Failed to add new location option:', err);
+      alert(err.response?.data?.message || 'Location already exists');
+    } finally {
+      setIsAddingLocation(false);
+    }
+  };
+
+  const handleAddNewSource = async (e) => {
+    e.preventDefault();
+    if (!newSourceInput.trim()) return;
+    const val = newSourceInput.trim();
+    if (sourcesList.some(s => s.toLowerCase().trim() === val.toLowerCase())) {
+      alert('Source already exists');
+      return;
+    }
+    setIsAddingSource(true);
+    try {
+      await api.post('/options/add', { type: 'source', value: val }).catch(() => {});
+      if (!sourcesList.includes(val)) {
+        setSourcesList(prev => [...prev, val].sort());
+      }
+      setFormData(prev => ({ ...prev, Source: val }));
+      setNewSourceInput('');
+      setShowAddSource(false);
+    } catch (err) {
+      console.error('Failed to add new source option:', err);
+      alert(err.response?.data?.message || 'Source already exists');
+    } finally {
+      setIsAddingSource(false);
+    }
+  };
 
   // Helper to ensure date is in YYYY-MM-DD for the HTML5 input
   const formatDateForInput = (dateStr) => {
@@ -238,16 +306,50 @@ const RecordFormModal = ({ record, onClose, onSave, user, uniqueLocations = [], 
                 className={`w-full bg-slate-50 border ${errors['Name of property'] ? 'border-red-300 focus:ring-red-500' : 'border-slate-200 focus:ring-brand-500'} rounded-xl py-2.5 px-4 focus:outline-none focus:ring-2 focus:border-transparent transition-all`} />
             </InputWrapper>
 
-            <InputWrapper label="Location" error={errors['Location']}>
-               <SearchableSelect 
-                 name="Location"
-                 value={formData['Location']}
-                 onChange={handleChange}
-                 options={uniqueLocations}
-                 allowCustom={false}
-                 placeholder="Search or select location..."
-               />
-            </InputWrapper>
+            <div className="space-y-1 relative">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider ml-1">Location *</label>
+                <button
+                  type="button"
+                  onClick={() => setShowAddLocation(!showAddLocation)}
+                  className="text-xs text-brand-600 hover:text-brand-700 font-bold flex items-center gap-1 bg-brand-50 hover:bg-brand-100 px-2 py-0.5 rounded-lg transition-colors"
+                  title="Add new location to list"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Location</span>
+                </button>
+              </div>
+
+              {showAddLocation && (
+                <div className="flex gap-2 my-1 animate-fade-in">
+                  <input
+                    type="text"
+                    value={newLocationInput}
+                    onChange={(e) => setNewLocationInput(e.target.value)}
+                    placeholder="New location name..."
+                    className="flex-1 bg-white border border-brand-300 rounded-xl px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddNewLocation}
+                    disabled={isAddingLocation || !newLocationInput.trim()}
+                    className="bg-brand-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-brand-700 transition-colors disabled:opacity-50"
+                  >
+                    {isAddingLocation ? '...' : 'Save'}
+                  </button>
+                </div>
+              )}
+
+              <SearchableSelect 
+                name="Location"
+                value={formData['Location']}
+                onChange={handleChange}
+                options={locationsList}
+                allowCustom={false}
+                placeholder="Search or select location..."
+              />
+              {errors['Location'] && <p className="text-red-500 text-xs ml-1 mt-1">{errors['Location']}</p>}
+            </div>
 
             <InputWrapper label="Person (Employee Name)" error={errors['Name of Person']}>
                <SearchableSelect 
@@ -264,16 +366,50 @@ const RecordFormModal = ({ record, onClose, onSave, user, uniqueLocations = [], 
                 className={`w-full bg-slate-50 border ${errors['Phone Number'] ? 'border-red-300 focus:ring-red-500' : 'border-slate-200 focus:ring-brand-500'} rounded-xl py-2.5 px-4 focus:outline-none focus:ring-2 focus:border-transparent transition-all`} />
             </InputWrapper>
 
-            <InputWrapper label="Source" error={errors['Source']}>
-               <SearchableSelect 
-                 name="Source"
-                 value={formData['Source']}
-                 onChange={handleChange}
-                 options={SOURCE_OPTIONS}
-                 allowCustom={false}
-                 placeholder="Select source..."
-               />
-            </InputWrapper>
+            <div className="space-y-1 relative">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider ml-1">Source</label>
+                <button
+                  type="button"
+                  onClick={() => setShowAddSource(!showAddSource)}
+                  className="text-xs text-brand-600 hover:text-brand-700 font-bold flex items-center gap-1 bg-brand-50 hover:bg-brand-100 px-2 py-0.5 rounded-lg transition-colors"
+                  title="Add new source to list"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Source</span>
+                </button>
+              </div>
+
+              {showAddSource && (
+                <div className="flex gap-2 my-1 animate-fade-in">
+                  <input
+                    type="text"
+                    value={newSourceInput}
+                    onChange={(e) => setNewSourceInput(e.target.value)}
+                    placeholder="New source name..."
+                    className="flex-1 bg-white border border-brand-300 rounded-xl px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddNewSource}
+                    disabled={isAddingSource || !newSourceInput.trim()}
+                    className="bg-brand-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-brand-700 transition-colors disabled:opacity-50"
+                  >
+                    {isAddingSource ? '...' : 'Save'}
+                  </button>
+                </div>
+              )}
+
+              <SearchableSelect 
+                name="Source"
+                value={formData['Source']}
+                onChange={handleChange}
+                options={sourcesList}
+                allowCustom={false}
+                placeholder="Select source..."
+              />
+              {errors['Source'] && <p className="text-red-500 text-xs ml-1 mt-1">{errors['Source']}</p>}
+            </div>
 
             <InputWrapper label="Status" error={errors['Status']}>
                <SearchableSelect 

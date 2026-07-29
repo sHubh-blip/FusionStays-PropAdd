@@ -13,6 +13,7 @@ import RecordFormModal from '../components/RecordFormModal';
 import SkeletonTable from '../components/SkeletonTable';
 import ChatPanel from '../components/ChatPanel';
 import { getTodayIST, normalizeDate } from '../utils/dateUtils';
+import TeamMemberDashboard from './TeamMemberDashboard';
 
 const Dashboard = () => {
   const { user, logout } = useContext(AuthContext);
@@ -83,6 +84,7 @@ const Dashboard = () => {
       startDate,
       endDate
     }),
+    enabled: user?.role?.toLowerCase() !== 'team_member',
     placeholderData: (prev) => prev,
   });
 
@@ -93,6 +95,7 @@ const Dashboard = () => {
       const { data } = await api.get('/records?paginate=false');
       return data.data || [];
     },
+    enabled: user?.role?.toLowerCase() !== 'team_member',
     staleTime: 60000, // 1 minute
   });
 
@@ -132,13 +135,45 @@ const Dashboard = () => {
     }
   };
 
+  // Fetch master dropdowns list from Google Sheets
+  const { data: dropdownsData } = useQuery({
+    queryKey: ['dropdowns'],
+    queryFn: async () => {
+      const res = await api.get('/dropdowns');
+      return res.data?.dropdowns || {};
+    },
+    staleTime: 30000,
+  });
+
+  // Fetch active users list from User Management
+  const { data: usersListData } = useQuery({
+    queryKey: ['usersList'],
+    queryFn: async () => {
+      const res = await api.get('/users/list');
+      return res.data || [];
+    },
+    staleTime: 30000,
+  });
+
   const uniquePersons = useMemo(() => {
-    return [...new Set(allRecords.map(r => r["Name of Person"]).filter(Boolean))].sort();
-  }, [allRecords]);
+    const fromRecords = allRecords.map(r => r["Name of Person"]).filter(Boolean);
+    const fromDropdowns = dropdownsData?.agent?.values || [];
+    const fromUsers = (usersListData || []).map(u => {
+      if (u.name && u.name.trim()) return u.name.trim();
+      const userPart = u.email ? u.email.split('@')[0] : '';
+      return userPart ? userPart.charAt(0).toUpperCase() + userPart.slice(1) : '';
+    }).filter(Boolean);
+
+    const merged = new Set([...fromRecords, ...fromDropdowns, ...fromUsers]);
+    return Array.from(merged).filter(name => name.toLowerCase() !== 'agent').sort();
+  }, [allRecords, dropdownsData, usersListData]);
 
   const uniqueLocations = useMemo(() => {
-    return [...new Set(allRecords.map(r => r["Location"]).filter(Boolean))].sort();
-  }, [allRecords]);
+    const fromRecords = allRecords.map(r => r["Location"]).filter(Boolean);
+    const fromDropdowns = dropdownsData?.location?.values || [];
+    const merged = new Set([...fromRecords, ...fromDropdowns]);
+    return Array.from(merged).filter(loc => loc.toLowerCase() !== 'location').sort();
+  }, [allRecords, dropdownsData]);
 
 
   const getPersonCount = (person) => allRecords.filter(r => r["Name of Person"] === person).length;
@@ -183,6 +218,10 @@ const Dashboard = () => {
       alert('Failed to update person assignment.');
     }
   }, [queryClient]);
+
+  if (user?.role?.toLowerCase() === 'team_member') {
+    return <TeamMemberDashboard />;
+  }
 
   return (
     <div className="max-h-screen min-h-screen bg-slate-200 font-sans flex flex-col overflow-hidden">

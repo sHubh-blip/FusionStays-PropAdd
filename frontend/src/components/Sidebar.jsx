@@ -38,24 +38,28 @@ const Sidebar = ({
         <div>
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-3">Main Menu</h3>
           <ul className="space-y-1.5">
-            <li>
-              <button 
-                onClick={() => navigate('/dashboard')}
-                className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all ${isActive('/dashboard') ? 'bg-brand-50 text-brand-700 font-bold shadow-sm border border-brand-100' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'}`}
-              >
-                <LayoutDashboard className={`w-5 h-5 mr-3 ${isActive('/dashboard') ? 'text-brand-500' : 'text-slate-400'}`} />
-                Stats Dashboard
-              </button>
-            </li>
-            <li>
-              <button 
-                onClick={() => navigate('/properties')}
-                className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all ${isActive('/properties') ? 'bg-brand-50 text-brand-700 font-bold shadow-sm border border-brand-100' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'}`}
-              >
-                <Database className={`w-5 h-5 mr-3 ${isActive('/properties') ? 'text-brand-500' : 'text-slate-400'}`} />
-                Properties Database
-              </button>
-            </li>
+            {user?.role !== 'team_member' && (
+              <li>
+                <button 
+                  onClick={() => navigate('/dashboard')}
+                  className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all ${isActive('/dashboard') ? 'bg-brand-50 text-brand-700 font-bold shadow-sm border border-brand-100' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'}`}
+                >
+                  <LayoutDashboard className={`w-5 h-5 mr-3 ${isActive('/dashboard') ? 'text-brand-500' : 'text-slate-400'}`} />
+                  Stats Dashboard
+                </button>
+              </li>
+            )}
+            {user?.role !== 'team_member' && (
+              <li>
+                <button 
+                  onClick={() => navigate('/properties')}
+                  className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all ${isActive('/properties') ? 'bg-brand-50 text-brand-700 font-bold shadow-sm border border-brand-100' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'}`}
+                >
+                  <Database className={`w-5 h-5 mr-3 ${isActive('/properties') ? 'text-brand-500' : 'text-slate-400'}`} />
+                  Properties Database
+                </button>
+              </li>
+            )}
             <li>
               <button 
                 onClick={() => navigate('/leads')}

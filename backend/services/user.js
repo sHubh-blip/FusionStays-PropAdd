@@ -104,6 +104,7 @@ async function listUsers() {
   const rows = await sheet.getRows();
   return rows.map(row => ({
     email: row.get('email'),
+    name: row.get('name') || '',
     role: row.get('role'),
     status: row.get('status'),
     createdAt: row.get('createdAt')
@@ -111,12 +112,26 @@ async function listUsers() {
 }
 
 // Create new user
-async function createUser({ email, password, role, status }) {
+async function createUser({ name, email, password, role, status }) {
   const sheet = await getUserSheet();
-  const cleanEmail = email.toLowerCase().trim();
+
+  // Extract first name (case-insensitive check)
+  const rawFirstName = (name || email.split('@')[0]).trim().split(' ')[0];
+  const cleanFirstName = rawFirstName.charAt(0).toUpperCase() + rawFirstName.slice(1).toLowerCase();
+  const firstNameLower = cleanFirstName.toLowerCase();
+  const cleanEmail = `${firstNameLower}@workspace.com`;
+
+  // Check if first name or email already exists (case-insensitive)
+  const allUsers = await listUsers();
+  const existsByFirstName = allUsers.some(u => {
+    const uEmailPrefix = (u.email || '').split('@')[0].toLowerCase().trim();
+    const uFirstName = (u.name || '').trim().split(' ')[0].toLowerCase();
+    return uEmailPrefix === firstNameLower || uFirstName === firstNameLower;
+  });
+
   const userExists = await findUserByEmail(cleanEmail);
 
-  if (userExists) {
+  if (existsByFirstName || userExists) {
     throw new Error('User already exists');
   }
 
@@ -125,12 +140,21 @@ async function createUser({ email, password, role, status }) {
 
   const newUser = {
     email: cleanEmail,
+    name: cleanFirstName,
     passwordHash,
     salt,
-    role: role || 'user',
+    role: role || 'prop_add',
     status: status || 'active',
     createdAt: new Date().toISOString()
   };
+
+  // Sync new user single name to the Excel agent dropdown list
+  try {
+    const { ensureDropdownValue } = require('../utils/dropdownManager');
+    await ensureDropdownValue('agent', cleanFirstName);
+  } catch (err) {
+    console.warn("Could not sync new user to Excel dropdown agent list:", err.message);
+  }
 
   if (!sheet) {
     // Mock mode write bypass
@@ -141,6 +165,7 @@ async function createUser({ email, password, role, status }) {
   await sheet.addRow(newUser);
   return {
     email: newUser.email,
+    name: newUser.name,
     role: newUser.role,
     status: newUser.status,
     createdAt: newUser.createdAt
@@ -158,6 +183,19 @@ async function updateUser(email, updates) {
   }
 
   const row = user._row;
+  if (updates.name && updates.name.trim()) {
+    const rawName = updates.name.trim().split(' ')[0];
+    const cleanName = rawName.charAt(0).toUpperCase() + rawName.slice(1).toLowerCase();
+    row.assign({ name: cleanName });
+
+    try {
+      const { ensureDropdownValue } = require('../utils/dropdownManager');
+      await ensureDropdownValue('agent', cleanName);
+    } catch (err) {
+      console.warn("Could not sync updated name to agent dropdown:", err.message);
+    }
+  }
+
   if (updates.role) row.assign({ role: updates.role });
   if (updates.status) row.assign({ status: updates.status });
   if (updates.password) {
@@ -169,6 +207,7 @@ async function updateUser(email, updates) {
   await row.save();
   return {
     email: row.get('email'),
+    name: row.get('name'),
     role: row.get('role'),
     status: row.get('status'),
     createdAt: row.get('createdAt')

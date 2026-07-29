@@ -107,14 +107,23 @@ const fetchLeadsSheet = async () => {
 router.get('/leads', requireAuth, async (req, res) => {
   try {
     const data = await fetchLeadsSheet();
-    
-    // Sort mock leads descending as well
-    if (data.mock) {
-      const sortedMock = [...data.rows].reverse();
-      return res.json(sortedMock);
+    let rows = data.mock ? [...data.rows].reverse() : data.rows;
+
+    const userRole = (req.user?.role || '').toLowerCase();
+    // Non-admin & Non-team_member (e.g., prop_add / PA): only return leads assigned to the requesting user
+    if (userRole !== 'admin' && userRole !== 'team_member') {
+      const userEmail = (req.user?.email || '').toLowerCase();
+      const userUsername = userEmail.split('@')[0];
+      const isAssignee = (assignedToVal) => {
+        if (!assignedToVal) return false;
+        const target = assignedToVal.trim().toLowerCase();
+        if (!target || target === 'unassigned') return false;
+        return target === userEmail || target === userUsername || userEmail.startsWith(target) || target.includes(userUsername);
+      };
+      rows = rows.filter(lead => isAssignee(lead['Assigned To']));
     }
-    
-    res.json(data.rows);
+
+    res.json(rows);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch leads', error: error.message });
   }

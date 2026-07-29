@@ -30,32 +30,46 @@ router.get('/users', requireRole(['admin']), async (req, res) => {
 
 // POST /users - create a new user
 router.post('/users', requireRole(['admin']), async (req, res) => {
-  const { email, password, role, status } = req.body;
+  const { fullName, name, email, password, role, status } = req.body;
+  const inputName = (fullName || name || email || '').trim();
 
-  if (!email || !password) {
-    return res.status(400).json({ message: 'Email and password are required.' });
+  if (!inputName || !password) {
+    return res.status(400).json({ message: 'Full Name and Password are required.' });
+  }
+
+  // Generate username login format: firstname@workspace.com
+  let userEmail = email;
+  if (!userEmail || fullName || name || !userEmail.includes('@')) {
+    const firstName = inputName.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+    userEmail = `${firstName}@workspace.com`;
   }
 
   try {
     const newUser = await userService.createUser({
-      email,
+      name: inputName,
+      email: userEmail,
       password,
-      role: role || 'user',
+      role: role || 'prop_add',
       status: status || 'active'
     });
     res.status(201).json({ message: 'User created successfully', user: newUser });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.status(400).json({ message: error.message || 'User creation failed.' });
   }
 });
 
 // PUT /users/:email - update a user
 router.put('/users/:email', requireRole(['admin']), async (req, res) => {
   const { email } = req.params;
-  const { role, status, password } = req.body;
+  const { name, fullName, role, status, password } = req.body;
 
   try {
-    const updatedUser = await userService.updateUser(email, { role, status, password });
+    const updatedUser = await userService.updateUser(email, { 
+      name: name || fullName, 
+      role, 
+      status, 
+      password 
+    });
     res.json({ message: 'User updated successfully', user: updatedUser });
   } catch (error) {
     res.status(400).json({ message: error.message });

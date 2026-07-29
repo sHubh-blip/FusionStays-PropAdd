@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Home, Link2, Phone, MapPin, UserCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Home, Link2, Phone, MapPin, UserCheck, Plus } from 'lucide-react';
 import api from '../api';
 
 const LeadUploadModal = ({ onClose, onComplete, uniquePersons = [], uniqueLocations = [] }) => {
@@ -10,6 +10,41 @@ const LeadUploadModal = ({ onClose, onComplete, uniquePersons = [], uniqueLocati
   const [assignedTo, setAssignedTo] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const [locationsList, setLocationsList] = useState(uniqueLocations);
+  const [showAddLocationInput, setShowAddLocationInput] = useState(false);
+  const [newLocationName, setNewLocationName] = useState('');
+  const [isAddingLocation, setIsAddingLocation] = useState(false);
+
+  useEffect(() => {
+    setLocationsList(uniqueLocations);
+  }, [uniqueLocations]);
+
+  const handleAddLocation = async (e) => {
+    e.preventDefault();
+    if (!newLocationName.trim()) return;
+    const addedLoc = newLocationName.trim();
+    if (locationsList.some(l => l.toLowerCase().trim() === addedLoc.toLowerCase())) {
+      setError('Location already exists');
+      return;
+    }
+    setIsAddingLocation(true);
+    try {
+      await api.post('/options/add', { type: 'location', value: addedLoc });
+      if (!locationsList.includes(addedLoc)) {
+        setLocationsList(prev => [...prev, addedLoc].sort());
+      }
+      setLocation(addedLoc);
+      setNewLocationName('');
+      setShowAddLocationInput(false);
+      setError('');
+    } catch (err) {
+      console.error('Failed to add location option:', err);
+      setError(err.response?.data?.message || 'Location already exists');
+    } finally {
+      setIsAddingLocation(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -127,7 +162,39 @@ const LeadUploadModal = ({ onClose, onComplete, uniquePersons = [], uniqueLocati
 
             {/* Location Select Dropdown */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Location *</label>
+              <div className="flex justify-between items-center ml-1">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Location *</label>
+                <button
+                  type="button"
+                  onClick={() => setShowAddLocationInput(!showAddLocationInput)}
+                  className="text-xs text-brand-600 hover:text-brand-700 font-bold flex items-center gap-1 bg-brand-50 hover:bg-brand-100 px-2 py-0.5 rounded-lg transition-colors"
+                  title="Add new location to list"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Location</span>
+                </button>
+              </div>
+
+              {showAddLocationInput && (
+                <div className="flex gap-2 mb-2 animate-fade-in">
+                  <input
+                    type="text"
+                    value={newLocationName}
+                    onChange={(e) => setNewLocationName(e.target.value)}
+                    placeholder="Enter new location name..."
+                    className="flex-1 bg-white border border-brand-300 rounded-xl px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddLocation}
+                    disabled={isAddingLocation || !newLocationName.trim()}
+                    className="bg-brand-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-brand-700 transition-colors disabled:opacity-50"
+                  >
+                    {isAddingLocation ? '...' : 'Save'}
+                  </button>
+                </div>
+              )}
+
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <MapPin className="w-4 h-4" />
@@ -139,7 +206,7 @@ const LeadUploadModal = ({ onClose, onComplete, uniquePersons = [], uniqueLocati
                   className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-brand-500 rounded-xl py-2.5 pl-10 pr-4 text-sm font-semibold text-slate-800 transition-all focus:outline-none appearance-none"
                 >
                   <option value="">Select location...</option>
-                  {uniqueLocations.map(loc => (
+                  {locationsList.map(loc => (
                     <option key={loc} value={loc}>{loc}</option>
                   ))}
                 </select>
@@ -185,7 +252,7 @@ const LeadUploadModal = ({ onClose, onComplete, uniquePersons = [], uniqueLocati
             {isLoading ? (
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
             ) : (
-              'Save & Assign Lead'
+              'Add New Lead'
             )}
           </button>
         </div>

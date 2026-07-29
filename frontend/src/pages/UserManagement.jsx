@@ -3,13 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { 
   Users, Plus, Trash2, Shield, ShieldAlert, Ban, CheckCircle, 
-  ArrowLeft, LogOut, Plane, Menu, X, KeyRound, Loader2, AlertCircle, Eye, EyeOff
+  ArrowLeft, LogOut, Plane, Menu, X, KeyRound, Loader2, AlertCircle, Eye, EyeOff, Edit3
 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import api from '../api';
 
 const UserManagement = () => {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // State
   const [users, setUsers] = useState([]);
@@ -23,14 +25,26 @@ const UserManagement = () => {
   // Form State
   const [showAddModal, setShowAddModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(null); // stores user object
+  const [showEditModal, setShowEditModal] = useState(null); // stores user object being edited
+  const [editName, setEditName] = useState('');
+  const [editRole, setEditRole] = useState('user');
+  const [editStatus, setEditStatus] = useState('active');
+  const [editPassword, setEditPassword] = useState('');
+  const [showEditPassword, setShowEditPassword] = useState(false);
+
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('user');
+  const [role, setRole] = useState('prop_add');
   const [status, setStatus] = useState('active');
   const [newPassword, setNewPassword] = useState('');
   const [formError, setFormError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+
+  const generatedUsername = fullName.trim() 
+    ? `${fullName.trim().split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '')}@workspace.com` 
+    : '';
 
   // Fetch Users
   const fetchUsers = async () => {
@@ -54,19 +68,22 @@ const UserManagement = () => {
   const handleCreateUser = async (e) => {
     e.preventDefault();
     setFormError('');
-    if (!email || !password) {
-      setFormError('Email and Password are required.');
+    if (!fullName.trim() || !password) {
+      setFormError('Full Name and Password are required.');
       return;
     }
     
     try {
-      await api.post('/users', { email, password, role, status });
+      await api.post('/users', { fullName: fullName.trim(), password, role, status });
       setShowAddModal(false);
+      setFullName('');
       setEmail('');
       setPassword('');
       setRole('user');
       setStatus('active');
       fetchUsers();
+      queryClient.invalidateQueries(['dropdowns']);
+      queryClient.invalidateQueries(['usersList']);
     } catch (err) {
       setFormError(err.response?.data?.message || 'Failed to create user.');
     }
@@ -94,8 +111,8 @@ const UserManagement = () => {
       return;
     }
 
-    const newRole = targetUser.role === 'admin' ? 'user' : 'admin';
-    if (!window.confirm(`Are you sure you want to change ${targetUser.email}'s role to ${newRole}?`)) {
+    const newRole = targetUser.role === 'admin' ? 'prop_add' : 'admin';
+    if (!window.confirm(`Are you sure you want to change ${targetUser.email}'s role to ${newRole === 'admin' ? 'Admin' : 'Prop/Add'}?`)) {
       return;
     }
 
@@ -257,11 +274,13 @@ const UserManagement = () => {
                             className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${
                               item.role === 'admin' 
                                 ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' 
-                                : 'bg-slate-100 text-slate-600 border border-slate-200'
+                                : item.role === 'team_member'
+                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                : 'bg-blue-50 text-blue-700 border border-blue-200'
                             } ${isSelf ? 'cursor-not-allowed opacity-80' : 'hover:scale-105'}`}
                           >
                             {item.role === 'admin' ? <Shield className="w-3 h-3" /> : <ShieldAlert className="w-3 h-3" />}
-                            <span className="capitalize">{item.role}</span>
+                            <span>{item.role === 'admin' ? 'Admin' : item.role === 'team_member' ? 'Team Member' : 'Prop/Add'}</span>
                           </button>
                         </td>
                         <td className="px-6 py-4">
@@ -283,6 +302,14 @@ const UserManagement = () => {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleOpenEditModal(item)}
+                              disabled={isUserActionLoading}
+                              className="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors"
+                              title="Edit User Credentials"
+                            >
+                              <Edit3 className="w-4.5 h-4.5" />
+                            </button>
                             <button
                               onClick={() => setShowPasswordModal(item)}
                               disabled={isUserActionLoading}
@@ -331,16 +358,21 @@ const UserManagement = () => {
               )}
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">User Email Address</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Full Name *</label>
                 <input
-                  type="email"
+                  type="text"
                   required
-                  autoComplete="new-email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. agent@fusionstays.com"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="e.g. Rahul Sharma"
                   className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-brand-500 focus:border-transparent rounded-xl px-4 py-2.5 text-sm focus:outline-none transition-all"
                 />
+                {generatedUsername && (
+                  <p className="text-xs text-brand-600 font-semibold mt-1.5 flex items-center gap-1">
+                    <span>Generated Login Username:</span>
+                    <code className="bg-brand-50 text-brand-700 px-2 py-0.5 rounded border border-brand-200 font-bold">{generatedUsername}</code>
+                  </p>
+                )}
               </div>
 
               <div>
@@ -373,8 +405,9 @@ const UserManagement = () => {
                     onChange={(e) => setRole(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all font-semibold"
                   >
-                    <option value="user">User (Agent)</option>
-                    <option value="admin">Administrator</option>
+                    <option value="admin">Admin</option>
+                    <option value="prop_add">Prop/Add</option>
+                    <option value="team_member">Team Member</option>
                   </select>
                 </div>
                 <div>
@@ -460,6 +493,99 @@ const UserManagement = () => {
                 >
                   {actionLoading === showPasswordModal.email && <Loader2 className="w-4 h-4 animate-spin" />}
                   <span>Change Password</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Credentials Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-100 transform transition-all animate-scale-up">
+            <div className="px-6 py-4 bg-slate-50 border-b border-slate-150 flex justify-between items-center">
+              <div>
+                <h3 className="font-bold text-lg text-slate-800">Edit User Credentials</h3>
+                <p className="text-xs text-slate-500 font-medium">{showEditModal.email}</p>
+              </div>
+              <button onClick={() => setShowEditModal(null)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Display Name (First Name)</label>
+                <input
+                  type="text"
+                  required
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="e.g. Shubhra"
+                  className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-brand-500 focus:border-transparent rounded-xl px-4 py-2.5 text-sm focus:outline-none transition-all font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">New Password (Leave blank to keep current)</label>
+                <div className="relative">
+                  <input
+                    type={showEditPassword ? "text" : "password"}
+                    value={editPassword}
+                    onChange={(e) => setEditPassword(e.target.value)}
+                    placeholder="Enter new password if changing"
+                    className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-brand-500 focus:border-transparent rounded-xl pl-4 pr-12 py-2.5 text-sm focus:outline-none transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowEditPassword(!showEditPassword)}
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-700 transition-colors"
+                  >
+                    {showEditPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Role Type</label>
+                  <select
+                    value={editRole}
+                    onChange={(e) => setEditRole(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all font-semibold"
+                  >
+                    <option value="admin">Admin</option>
+                    <option value="prop_add">Prop/Add</option>
+                    <option value="team_member">Team Member</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Account Status</label>
+                  <select
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all font-semibold"
+                  >
+                    <option value="active">Active</option>
+                    <option value="suspended">Suspended</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(null)}
+                  className="px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={actionLoading === showEditModal.email}
+                  className="px-5 py-2.5 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-md transition-all flex items-center gap-2"
+                >
+                  {actionLoading === showEditModal.email && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <span>Save Changes</span>
                 </button>
               </div>
             </form>
