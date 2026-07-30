@@ -485,7 +485,7 @@ const Dashboard = () => {
                   className="bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl py-2.5 px-5 shadow-md hover:shadow-lg transition-all flex items-center flex-shrink-0 transform hover:-translate-y-0.5 active:translate-y-0"
                 >
                   <Layers className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Internal Lead</span>
+                  <span className="hidden sm:inline">Create Lead</span>
                 </button>
                 <button
                   onClick={handleCreate}

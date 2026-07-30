@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { 
   Users, Plus, Trash2, Shield, ShieldAlert, Ban, CheckCircle, 
-  ArrowLeft, LogOut, Plane, Menu, X, KeyRound, Loader2, AlertCircle, Eye, EyeOff, Edit3
+  ArrowLeft, LogOut, Plane, Menu, X, KeyRound, Loader2, AlertCircle, Eye, EyeOff, Edit3, ChevronDown
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import api from '../api';
@@ -103,25 +103,59 @@ const UserManagement = () => {
     }
   };
 
-  // Handle Role Toggle (Admin / User)
-  const handleToggleRole = async (targetUser) => {
-    // Prevent self role change to avoid accidental lockouts
+  // Handle Role Selection (Admin / Prop/Add / Team Member)
+  const handleRoleChange = async (targetUser, newRole) => {
     if (targetUser.email.toLowerCase() === user.email.toLowerCase()) {
       alert("You cannot change your own role to prevent lockout.");
       return;
     }
-
-    const newRole = targetUser.role === 'admin' ? 'prop_add' : 'admin';
-    if (!window.confirm(`Are you sure you want to change ${targetUser.email}'s role to ${newRole === 'admin' ? 'Admin' : 'Prop/Add'}?`)) {
-      return;
-    }
+    if (targetUser.role === newRole) return;
 
     setActionLoading(targetUser.email);
     try {
       await api.put(`/users/${targetUser.email}`, { role: newRole });
       setUsers(users.map(u => u.email === targetUser.email ? { ...u, role: newRole } : u));
+      queryClient.invalidateQueries(['usersList']);
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to update user role.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Open Edit Credentials Modal
+  const handleOpenEditModal = (targetUser) => {
+    setShowEditModal(targetUser);
+    setEditName(targetUser.name || (targetUser.email ? targetUser.email.split('@')[0] : ''));
+    setEditRole(targetUser.role || 'prop_add');
+    setEditStatus(targetUser.status || 'active');
+    setEditPassword('');
+  };
+
+  // Handle Save Edit Credentials
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (!showEditModal) return;
+
+    setActionLoading(showEditModal.email);
+    try {
+      const payload = {
+        name: editName,
+        role: editRole,
+        status: editStatus
+      };
+      if (editPassword && editPassword.trim()) {
+        payload.password = editPassword.trim();
+      }
+
+      await api.put(`/users/${showEditModal.email}`, payload);
+      setUsers(users.map(u => u.email === showEditModal.email ? { ...u, ...payload } : u));
+      setShowEditModal(null);
+      setEditPassword('');
+      queryClient.invalidateQueries(['usersList']);
+      alert("User credentials updated successfully.");
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update user credentials.');
     } finally {
       setActionLoading(null);
     }
@@ -268,20 +302,27 @@ const UserManagement = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <button
-                            onClick={() => handleToggleRole(item)}
-                            disabled={isSelf || isUserActionLoading}
-                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${
-                              item.role === 'admin' 
-                                ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' 
-                                : item.role === 'team_member'
-                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                                : 'bg-blue-50 text-blue-700 border border-blue-200'
-                            } ${isSelf ? 'cursor-not-allowed opacity-80' : 'hover:scale-105'}`}
-                          >
-                            {item.role === 'admin' ? <Shield className="w-3 h-3" /> : <ShieldAlert className="w-3 h-3" />}
-                            <span>{item.role === 'admin' ? 'Admin' : item.role === 'team_member' ? 'Team Member' : 'Prop/Add'}</span>
-                          </button>
+                          <div className="relative inline-block">
+                            <select
+                              value={item.role}
+                              disabled={isSelf || isUserActionLoading}
+                              onChange={(e) => handleRoleChange(item, e.target.value)}
+                              className={`appearance-none flex items-center gap-1.5 px-3 py-1 pr-7 rounded-full text-xs font-bold transition-all cursor-pointer border focus:outline-none focus:ring-2 focus:ring-brand-400 ${
+                                item.role === 'admin' 
+                                  ? 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100' 
+                                  : item.role === 'team_member'
+                                  ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                                  : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                              } ${isSelf ? 'cursor-not-allowed opacity-80' : ''}`}
+                            >
+                              <option value="admin">Admin</option>
+                              <option value="prop_add">Prop/Add</option>
+                              <option value="team_member">Team Member</option>
+                            </select>
+                            <ChevronDown className={`w-3.5 h-3.5 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none ${
+                              item.role === 'admin' ? 'text-indigo-500' : item.role === 'team_member' ? 'text-amber-500' : 'text-blue-500'
+                            }`} />
+                          </div>
                         </td>
                         <td className="px-6 py-4">
                           <button

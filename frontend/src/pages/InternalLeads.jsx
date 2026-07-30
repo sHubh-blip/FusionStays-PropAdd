@@ -375,6 +375,9 @@ const InternalLeads = () => {
         <RecordFormModal
           record={{ 
             "Source": "Internal Lead",
+            "Name of Person": (selectedLead?.["Assigned To"] && selectedLead["Assigned To"].trim().toLowerCase() !== 'unassigned') 
+              ? selectedLead["Assigned To"].trim() 
+              : (user?.name || (user?.email ? user.email.split('@')[0] : '')),
             "Name of property": selectedLead?.["Name of Property"] || '',
             "Location": selectedLead?.["Location"] || '',
             "Phone Number": selectedLead?.["Phone Number"] || '',
