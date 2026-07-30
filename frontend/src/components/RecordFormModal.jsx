@@ -21,7 +21,8 @@ const SOURCE_OPTIONS = ["Inbound", "Outbound", "Referral", "Internal Lead"];
 const STATUS_OPTIONS = [
   "Yet to Call", "Called", "Declined", "Pending for QC", "Follow up", 
   "Live", "Called but didn't answer", "QC Reject", "Not needed", 
-  "Full Details Received", "In draft", "already live"
+  "Full Details Received", "In draft", "already live",
+  "contact++", "contact later", "Contacted", "In Progress"
 ];
 
 const InputWrapper = ({ label, error, children }) => (

@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { MoreVertical, Edit2, MapPin } from 'lucide-react';
 import { getTodayIST, normalizeDate } from '../utils/dateUtils';
 
@@ -15,9 +15,13 @@ const statusColors = {
   'Full Details Received': 'bg-[#6200ea] text-white border-transparent',
   'In draft': 'bg-[#f50057] text-white border-transparent',
   'already live': 'bg-[#e0f2f1] text-[#004d40] border-[#b2dfdb]',
+  'contact++': 'bg-emerald-100 text-emerald-800 border-emerald-300',
+  'contact later': 'bg-amber-100 text-amber-800 border-amber-300',
+  'Contacted': 'bg-blue-100 text-blue-800 border-blue-300',
+  'In Progress': 'bg-indigo-100 text-indigo-800 border-indigo-300',
 };
 
-const allStatuses = [
+const defaultStatuses = [
   'Yet to Call',
   'Called',
   'Declined',
@@ -29,7 +33,11 @@ const allStatuses = [
   'Not needed',
   'Full Details Received',
   'In draft',
-  'already live'
+  'already live',
+  'contact++',
+  'contact later',
+  'Contacted',
+  'In Progress'
 ];
 
 const RecordTable = ({ 
@@ -52,6 +60,11 @@ const RecordTable = ({
   endDate = '',
   setEndDate
 }) => {
+  const allStatuses = useMemo(() => {
+    const fromRecords = (records || []).map(r => r["Status"]).filter(Boolean);
+    return Array.from(new Set([...defaultStatuses, ...fromRecords]));
+  }, [records]);
+
   return (
     <div className="overflow-x-auto w-full">
       <table className="w-full table-fixed text-left border-collapse">

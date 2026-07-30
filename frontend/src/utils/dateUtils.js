@@ -165,3 +165,48 @@ export const isInPreviousYearIST = (dateStr) => {
   return normalized.startsWith(prevYear);
 };
 
+/**
+ * Get EOD work date in IST (resets at 6:00 AM IST)
+ * If current time is < 6:00 AM IST, returns yesterday's YYYY-MM-DD.
+ * Otherwise returns today's YYYY-MM-DD.
+ */
+export const getEODWorkDateIST = (dateObj = new Date()) => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    hour12: false
+  }).formatToParts(dateObj);
+
+  const year = parseInt(parts.find(p => p.type === 'year').value, 10);
+  const month = parseInt(parts.find(p => p.type === 'month').value, 10);
+  const day = parseInt(parts.find(p => p.type === 'day').value, 10);
+  const hour = parseInt(parts.find(p => p.type === 'hour').value, 10);
+
+  const d = new Date(year, month - 1, day);
+  if (hour < 6) {
+    d.setDate(d.getDate() - 1);
+  }
+
+  const yStr = d.getFullYear();
+  const mStr = String(d.getMonth() + 1).padStart(2, '0');
+  const dStr = String(d.getDate()).padStart(2, '0');
+  return `${yStr}-${mStr}-${dStr}`;
+};
+
+/**
+ * Format YYYY-MM-DD string to DD/MM/YY format (e.g. 30/07/26)
+ */
+export const formatEODHeaderDate = (yyyyMmDd) => {
+  if (!yyyyMmDd) return '';
+  const parts = yyyyMmDd.split('-');
+  if (parts.length === 3) {
+    const [y, m, d] = parts;
+    const shortY = y.slice(-2);
+    return `${d}/${m}/${shortY}`;
+  }
+  return yyyyMmDd;
+};
+

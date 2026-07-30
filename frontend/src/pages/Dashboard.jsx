@@ -5,13 +5,14 @@ import { AuthContext } from '../context/AuthContext';
 import {
   LogOut, Plus, Search, Plane, Home, RefreshCw, Users, MapPin, Layers,
   Menu, X, ChevronDown, ChevronRight, BarChart, Calendar, TrendingUp,
-  ChevronLeft, MessageSquare, Globe
+  ChevronLeft, MessageSquare, Globe, FileText
 } from 'lucide-react';
 import api from '../api';
 import RecordTable from '../components/RecordTable';
 import RecordFormModal from '../components/RecordFormModal';
 import SkeletonTable from '../components/SkeletonTable';
 import ChatPanel from '../components/ChatPanel';
+import EODGeneratorModal from '../components/EODGeneratorModal';
 import { getTodayIST, normalizeDate } from '../utils/dateUtils';
 import TeamMemberDashboard from './TeamMemberDashboard';
 
@@ -23,6 +24,8 @@ const Dashboard = () => {
   // Pagination & Filter State
   const [page, setPage] = useState(1);
   const limit = 50;
+
+  const [isEODModalOpen, setIsEODModalOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [personFilter, setPersonFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
@@ -358,7 +361,7 @@ const Dashboard = () => {
               </ul>
             </div>
 
-            <div className="px-3">
+            <div className="px-3 space-y-3">
               <button
                 onClick={() => navigate('/reports')}
                 className="w-full flex items-center justify-between p-4 bg-gradient-to-br from-brand-600 to-indigo-600 rounded-2xl text-white shadow-lg hover:shadow-brand-200/50 transition-all transform hover:-translate-y-1 active:scale-95 group"
@@ -373,6 +376,22 @@ const Dashboard = () => {
                   </div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-brand-200" />
+              </button>
+
+              <button
+                onClick={() => setIsEODModalOpen(true)}
+                className="w-full flex items-center justify-between p-4 bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl text-white shadow-lg hover:shadow-emerald-200/50 transition-all transform hover:-translate-y-1 active:scale-95 group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md group-hover:scale-110 transition-transform">
+                    <FileText className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-sm font-bold leading-tight">EOD Generator</div>
+                    <div className="text-[10px] text-emerald-100 font-medium">Daily work summary</div>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-emerald-200" />
               </button>
             </div>
 
@@ -479,6 +498,22 @@ const Dashboard = () => {
                   title="Refresh"
                 >
                   <RefreshCw className={`w-5 h-5 ${isFetching ? 'animate-spin text-brand-500' : ''}`} />
+                </button>
+                <button
+                  onClick={() => navigate('/reports')}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl py-2.5 px-4 shadow-md hover:shadow-lg transition-all flex items-center flex-shrink-0 transform hover:-translate-y-0.5 active:translate-y-0 text-xs sm:text-sm"
+                  title="Go to Report Dashboard"
+                >
+                  <BarChart className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Report Dashboard</span>
+                </button>
+                <button
+                  onClick={() => setIsEODModalOpen(true)}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl py-2.5 px-4 shadow-md hover:shadow-lg transition-all flex items-center flex-shrink-0 transform hover:-translate-y-0.5 active:translate-y-0 text-xs sm:text-sm"
+                  title="Open EOD Generator"
+                >
+                  <FileText className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">EOD Generator</span>
                 </button>
                 <button
                   onClick={() => navigate('/leads')}
@@ -635,6 +670,11 @@ const Dashboard = () => {
         onClose={() => setIsChatOpen(false)}
         onUnreadCountChange={setUnreadCount}
       />
+
+      {/* EOD Generator Modal */}
+      {isEODModalOpen && (
+        <EODGeneratorModal onClose={() => setIsEODModalOpen(false)} />
+      )}
     </div>
   );
 };

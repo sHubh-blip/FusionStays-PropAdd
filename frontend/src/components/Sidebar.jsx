@@ -3,8 +3,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { 
   BarChart, Layers, MapPin, Plus, Search, ChevronDown, ChevronRight, 
-  Users, TrendingUp, Calendar, LayoutDashboard, Database, ClipboardList, Settings
+  Users, TrendingUp, Calendar, LayoutDashboard, Database, ClipboardList, Settings,
+  FileText
 } from 'lucide-react';
+import EODGeneratorModal from './EODGeneratorModal';
 
 const Sidebar = ({ 
   records = [], 
@@ -24,6 +26,7 @@ const Sidebar = ({
   const [isReportsOpen, setIsReportsOpen] = useState(true);
   const [isLocationsOpen, setIsLocationsOpen] = useState(false);
   const [isTeamOpen, setIsTeamOpen] = useState(false);
+  const [isEODModalOpen, setIsEODModalOpen] = useState(false);
   const [locationSearch, setLocationSearch] = useState('');
   const [teamSearch, setTeamSearch] = useState('');
   const [expandedMember, setExpandedMember] = useState(null);
@@ -31,68 +34,78 @@ const Sidebar = ({
   const isActive = (path) => location.pathname === path;
 
   return (
-    <aside className="w-72 bg-white border-r border-slate-200 h-[calc(100vh-64px)] overflow-y-auto custom-scrollbar flex-shrink-0 hidden lg:block">
-      <div className="p-4 space-y-6">
-        
-        {/* Navigation */}
-        <div>
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-3">Main Menu</h3>
-          <ul className="space-y-1.5">
-            {user?.role !== 'team_member' && (
-              <li>
-                <button 
-                  onClick={() => navigate('/dashboard')}
-                  className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all ${isActive('/dashboard') ? 'bg-brand-50 text-brand-700 font-bold shadow-sm border border-brand-100' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'}`}
-                >
-                  <LayoutDashboard className={`w-5 h-5 mr-3 ${isActive('/dashboard') ? 'text-brand-500' : 'text-slate-400'}`} />
-                  Stats Dashboard
-                </button>
-              </li>
-            )}
-            {user?.role !== 'team_member' && (
-              <li>
-                <button 
-                  onClick={() => navigate('/properties')}
-                  className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all ${isActive('/properties') ? 'bg-brand-50 text-brand-700 font-bold shadow-sm border border-brand-100' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'}`}
-                >
-                  <Database className={`w-5 h-5 mr-3 ${isActive('/properties') ? 'text-brand-500' : 'text-slate-400'}`} />
-                  Properties Database
-                </button>
-              </li>
-            )}
-            <li>
-              <button 
-                onClick={() => navigate('/leads')}
-                className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all ${isActive('/leads') ? 'bg-brand-50 text-brand-700 font-bold shadow-sm border border-brand-100' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'}`}
-              >
-                <ClipboardList className={`w-5 h-5 mr-3 ${isActive('/leads') ? 'text-brand-500' : 'text-slate-400'}`} />
-                Internal Leads
-              </button>
-            </li>
-            {user?.role === 'admin' && (
-              <>
+    <>
+      <aside className="w-72 bg-white border-r border-slate-200 h-[calc(100vh-64px)] overflow-y-auto custom-scrollbar flex-shrink-0 hidden lg:block">
+        <div className="p-4 space-y-6">
+          
+          {/* Navigation */}
+          <div>
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-3">Main Menu</h3>
+            <ul className="space-y-1.5">
+              {user?.role !== 'team_member' && (
                 <li>
                   <button 
-                    onClick={() => navigate('/dropdown-manager')}
-                    className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all ${isActive('/dropdown-manager') ? 'bg-brand-50 text-brand-700 font-bold shadow-sm border border-brand-100' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'}`}
+                    onClick={() => navigate('/dashboard')}
+                    className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all ${isActive('/dashboard') ? 'bg-brand-50 text-brand-700 font-bold shadow-sm border border-brand-100' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'}`}
                   >
-                    <Settings className={`w-5 h-5 mr-3 ${isActive('/dropdown-manager') ? 'text-brand-500' : 'text-slate-400'}`} />
-                    Dropdown Settings
+                    <LayoutDashboard className={`w-5 h-5 mr-3 ${isActive('/dashboard') ? 'text-brand-500' : 'text-slate-400'}`} />
+                    Stats Dashboard
                   </button>
                 </li>
+              )}
+              {user?.role !== 'team_member' && (
                 <li>
                   <button 
-                    onClick={() => navigate('/user-management')}
-                    className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all ${isActive('/user-management') ? 'bg-brand-50 text-brand-700 font-bold shadow-sm border border-brand-100' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'}`}
+                    onClick={() => navigate('/properties')}
+                    className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all ${isActive('/properties') ? 'bg-brand-50 text-brand-700 font-bold shadow-sm border border-brand-100' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'}`}
                   >
-                    <Users className={`w-5 h-5 mr-3 ${isActive('/user-management') ? 'text-brand-500' : 'text-slate-400'}`} />
-                    User Registry
+                    <Database className={`w-5 h-5 mr-3 ${isActive('/properties') ? 'text-brand-500' : 'text-slate-400'}`} />
+                    Properties Database
                   </button>
                 </li>
-              </>
-            )}
-          </ul>
-        </div>
+              )}
+              <li>
+                <button 
+                  onClick={() => navigate('/leads')}
+                  className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all ${isActive('/leads') ? 'bg-brand-50 text-brand-700 font-bold shadow-sm border border-brand-100' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'}`}
+                >
+                  <ClipboardList className={`w-5 h-5 mr-3 ${isActive('/leads') ? 'text-brand-500' : 'text-slate-400'}`} />
+                  Internal Leads
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={() => setIsEODModalOpen(true)}
+                  className="w-full flex items-center px-3 py-2.5 rounded-xl transition-all text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 font-medium"
+                >
+                  <FileText className="w-5 h-5 mr-3 text-emerald-600" />
+                  EOD Generator
+                </button>
+              </li>
+              {user?.role === 'admin' && (
+                <>
+                  <li>
+                    <button 
+                      onClick={() => navigate('/dropdown-manager')}
+                      className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all ${isActive('/dropdown-manager') ? 'bg-brand-50 text-brand-700 font-bold shadow-sm border border-brand-100' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'}`}
+                    >
+                      <Settings className={`w-5 h-5 mr-3 ${isActive('/dropdown-manager') ? 'text-brand-500' : 'text-slate-400'}`} />
+                      Dropdown Settings
+                    </button>
+                  </li>
+                  <li>
+                    <button 
+                      onClick={() => navigate('/user-management')}
+                      className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all ${isActive('/user-management') ? 'bg-brand-50 text-brand-700 font-bold shadow-sm border border-brand-100' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'}`}
+                    >
+                      <Users className={`w-5 h-5 mr-3 ${isActive('/user-management') ? 'text-brand-500' : 'text-slate-400'}`} />
+                      User Registry
+                    </button>
+                  </li>
+                </>
+              )}
+            </ul>
+          </div>
 
         {/* Report Dashboard Section (Quick View) */}
         <div className="border border-slate-100 bg-slate-50/50 rounded-2xl overflow-hidden transition-all shadow-sm">
@@ -136,8 +149,12 @@ const Sidebar = ({
         </div>
 
         </div>
-      </div>
-    </aside>
+      </aside>
+
+      {isEODModalOpen && (
+        <EODGeneratorModal onClose={() => setIsEODModalOpen(false)} />
+      )}
+    </>
   );
 };
 

@@ -2,14 +2,16 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { LogOut, Plus, LayoutDashboard, Sparkles, CheckCircle2, Shield } from 'lucide-react';
+import { LogOut, Plus, LayoutDashboard, Sparkles, CheckCircle2, Shield, FileText } from 'lucide-react';
 import LeadUploadModal from '../components/LeadUploadModal';
+import EODGeneratorModal from '../components/EODGeneratorModal';
 import api from '../api';
 
 export default function TeamMemberDashboard() {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isEODOpen, setIsEODOpen] = useState(false);
   const [submittedLeadsCount, setSubmittedLeadsCount] = useState(0);
 
   // Fetch options for LeadUploadModal
@@ -115,7 +117,7 @@ export default function TeamMemberDashboard() {
           </div>
 
           {/* Centered Action Buttons Box */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
             
             {/* 1. Create Lead Button */}
             <button
@@ -127,11 +129,25 @@ export default function TeamMemberDashboard() {
               </div>
               <div className="text-center">
                 <span className="block font-bold text-base text-white">Create Lead</span>
-                <span className="text-xs text-rose-100/80 font-semibold">Open lead section to add leads</span>
+                <span className="text-xs text-rose-100/80 font-semibold">Add internal leads</span>
               </div>
             </button>
 
-            {/* 2. Dashboard Button */}
+            {/* 2. EOD Generator Button */}
+            <button
+              onClick={() => setIsEODOpen(true)}
+              className="group relative bg-gradient-to-br from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white rounded-2xl p-6 shadow-xl shadow-emerald-950/50 border border-emerald-500/30 flex flex-col items-center justify-center gap-3 transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0"
+            >
+              <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <FileText className="w-6 h-6 text-white" />
+              </div>
+              <div className="text-center">
+                <span className="block font-bold text-base text-white">EOD Generator</span>
+                <span className="text-xs text-emerald-100/80 font-semibold">Generate work report</span>
+              </div>
+            </button>
+
+            {/* 3. Dashboard Button */}
             <button
               onClick={() => navigate('/reports')}
               className="group relative bg-slate-800/90 hover:bg-slate-800 text-slate-200 rounded-2xl p-6 shadow-lg shadow-slate-950/50 border border-slate-700 flex flex-col items-center justify-center gap-3 transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0"
@@ -141,7 +157,7 @@ export default function TeamMemberDashboard() {
               </div>
               <div className="text-center">
                 <span className="block font-bold text-base text-white">Dashboard</span>
-                <span className="text-xs text-slate-400 font-medium">Open analytics & report dashboard</span>
+                <span className="text-xs text-slate-400 font-medium">Open analytics & report</span>
               </div>
             </button>
 
@@ -167,6 +183,11 @@ export default function TeamMemberDashboard() {
           uniquePersons={uniquePersons}
           uniqueLocations={uniqueLocations}
         />
+      )}
+
+      {/* EOD Generator Modal */}
+      {isEODOpen && (
+        <EODGeneratorModal onClose={() => setIsEODOpen(false)} />
       )}
     </div>
   );

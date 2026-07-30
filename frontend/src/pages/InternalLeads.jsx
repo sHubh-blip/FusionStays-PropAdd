@@ -7,7 +7,7 @@ import LeadUploadModal from '../components/LeadUploadModal';
 import RecordFormModal from '../components/RecordFormModal';
 import TeamMemberDashboard from './TeamMemberDashboard';
 
-const LEAD_STATUS_OPTIONS = ['Pending', 'In Progress', 'Contacted', 'Rejected', 'Added'];
+const LEAD_STATUS_OPTIONS = ['Pending', 'In Progress', 'Contacted', 'contact++', 'contact later', 'Rejected', 'Added'];
 
 const InternalLeads = () => {
   const { user } = useContext(AuthContext);
