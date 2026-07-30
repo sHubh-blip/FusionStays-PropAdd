@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { initializeSheets } = require('./googleSheets');
+const cache = require('./cache');
 
 // Helper to generate salt and hash passwords
 function generateSalt() {
@@ -89,6 +90,9 @@ async function findUserByEmail(email) {
 
 // List all users
 async function listUsers() {
+  const cachedUsers = cache.get('all_users');
+  if (cachedUsers) return cachedUsers;
+
   const sheet = await getUserSheet();
   if (!sheet) {
     // Mock mode fallback
@@ -102,13 +106,16 @@ async function listUsers() {
   }
 
   const rows = await sheet.getRows();
-  return rows.map(row => ({
+  const users = rows.map(row => ({
     email: row.get('email'),
     name: row.get('name') || '',
     role: row.get('role'),
     status: row.get('status'),
     createdAt: row.get('createdAt')
   }));
+
+  cache.set('all_users', users, 120); // 2 minute cache
+  return users;
 }
 
 // Create new user
@@ -159,10 +166,12 @@ async function createUser({ name, email, password, role, status }) {
   if (!sheet) {
     // Mock mode write bypass
     console.log("Mock Mode: User created", newUser);
+    cache.del('all_users');
     return newUser;
   }
 
   await sheet.addRow(newUser);
+  cache.del('all_users');
   return {
     email: newUser.email,
     name: newUser.name,

@@ -1,6 +1,7 @@
 // backend/utils/dropdownManager.js
 const { google } = require('googleapis');
 const { JWT } = require('google-auth-library');
+const cache = require('../services/cache');
 
 // ── Auth Setup ──────────────────────────────────────────────
 const privateKey = process.env.GOOGLE_PRIVATE_KEY 
@@ -83,25 +84,23 @@ async function _readCurrentValues(columnKey) {
     console.warn(`[DropdownManager] Error reading data validation for ${columnKey}:`, err.message);
   }
 
-  // Always scan spreadsheet rows to include all actual values present in Google Sheet
+  // Use cached records array if available to harvest present column values without extra API calls
   try {
-    const { initializeSheets } = require('../services/googleSheets');
-    const doc = await initializeSheets();
-    if (doc && doc.sheetsByIndex[0]) {
-      const rows = await doc.sheetsByIndex[0].getRows();
-      const headerName = col.label === 'Agent' ? 'Name of Person' : col.label;
-      rows.forEach(r => {
-        const val = r.get(headerName) || r.get(col.label);
-        if (val && val.trim()) {
-          const cleanVal = val.trim();
-          if (cleanVal.toLowerCase() !== col.label.toLowerCase() && cleanVal.toLowerCase() !== 'name of person') {
-            values.push(cleanVal);
-          }
+    const cachedRecords = cache.get('all_records');
+    if (cachedRecords && Array.isArray(cachedRecords)) {
+      const fieldName = columnKey === 'agent' ? 'Name of Person' :
+                        columnKey === 'location' ? 'Location' :
+                        columnKey === 'source' ? 'Source' :
+                        columnKey === 'status' ? 'Status' : col.label;
+      cachedRecords.forEach(r => {
+        const val = r[fieldName];
+        if (val && typeof val === 'string' && val.trim()) {
+          values.push(val.trim());
         }
       });
     }
   } catch (err) {
-    console.warn(`[DropdownManager] Row scan failed for ${columnKey}:`, err.message);
+    console.warn(`[DropdownManager] Record scan failed for ${columnKey}:`, err.message);
   }
 
   // Final Fallback: Predefined defaults merged
@@ -141,6 +140,7 @@ async function _writeValidationRule(columnKey, valuesList) {
     requestBody: { requests: [request] },
   });
 
+  cache.del('all_dropdowns'); // Invalidate cache
   return cleanList;
 }
 
@@ -156,6 +156,9 @@ function _colIndexToLetter(index) {
 }
 
 async function getAllDropdowns() {
+  const cached = cache.get('all_dropdowns');
+  if (cached) return cached;
+
   const results = {};
   for (const key of Object.keys(DROPDOWN_COLUMNS)) {
     try {
@@ -168,6 +171,7 @@ async function getAllDropdowns() {
       results[key] = { label: DROPDOWN_COLUMNS[key].label, values: [], error: err.message };
     }
   }
+  cache.set('all_dropdowns', results, 300); // 5 min TTL
   return results;
 }
 
@@ -260,7 +264,22 @@ async function renameDropdownValue(columnKey, oldValue, newValue) {
 
 async function ensureDropdownValue(columnKey, value) {
   if (!value || !value.toString().trim()) return;
-  return await addDropdownValues(columnKey, [value.toString().trim()]);
+  const strVal = value.toString().trim();
+  
+  // Fast path: Check if already present in cached dropdowns
+  const cachedDropdowns = cache.get('all_dropdowns');
+  if (cachedDropdowns && cachedDropdowns[columnKey]?.values) {
+    const exists = cachedDropdowns[columnKey].values.some(
+      v => v.toLowerCase() === strVal.toLowerCase()
+    );
+    if (exists) return; // Already present, skip extra network calls!
+  }
+
+  try {
+    return await addDropdownValues(columnKey, [strVal]);
+  } catch (err) {
+    // Ignore duplicate or rate limit errors on auto-add
+  }
 }
 
 module.exports = {
@@ -272,3 +291,4 @@ module.exports = {
   ensureDropdownValue,
   DROPDOWN_COLUMNS,
 };
+

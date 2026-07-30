@@ -260,17 +260,18 @@ router.post('/records', requireAuth, async (req, res) => {
 router.put('/records/:id', requireAuth, async (req, res) => {
   try {
     const doc = await initializeSheets();
-
-    // Auto-register new values in dropdowns before updating row
-    await Promise.allSettled([
-      req.body["Name of Person"] ? ensureDropdownValue('agent', req.body["Name of Person"]) : null,
-      req.body["Location"] ? ensureDropdownValue('location', req.body["Location"]) : null,
-      req.body["Source"] ? ensureDropdownValue('source', req.body["Source"]) : null,
-      req.body["Status"] ? ensureDropdownValue('status', req.body["Status"]) : null,
-    ]);
-
     const id = req.params.id;
     const newStatus = (req.body['Status'] || '').trim().toLowerCase();
+
+    // Auto-register new values in dropdowns asynchronously without blocking status update
+    setImmediate(() => {
+      Promise.allSettled([
+        req.body["Name of Person"] ? ensureDropdownValue('agent', req.body["Name of Person"]) : null,
+        req.body["Location"] ? ensureDropdownValue('location', req.body["Location"]) : null,
+        req.body["Source"] ? ensureDropdownValue('source', req.body["Source"]) : null,
+        req.body["Status"] ? ensureDropdownValue('status', req.body["Status"]) : null,
+      ]).catch(() => {});
+    });
 
     // Every time status is updated to live or already live, set Live Date to present date
     if (newStatus === 'live' || newStatus === 'already live') {
@@ -322,7 +323,23 @@ router.put('/records/:id', requireAuth, async (req, res) => {
     });
 
     await rowToUpdate.save();
-    cache.del(CACHE_KEY); // Invalidate cache
+
+    // Update in-memory cache immediately for 0ms frontend refresh
+    let cachedRecords = cache.get(CACHE_KEY);
+    if (cachedRecords && Array.isArray(cachedRecords)) {
+      const recIndex = cachedRecords.findIndex(r => (r._rowIndex || '').toString() === id);
+      if (recIndex !== -1) {
+        updatableFields.forEach(field => {
+          if (req.body[field] !== undefined) {
+            cachedRecords[recIndex][field] = req.body[field];
+          }
+        });
+        cache.set(CACHE_KEY, cachedRecords, 300);
+      } else {
+        cache.del(CACHE_KEY);
+      }
+    }
+
     res.json({ message: 'Row updated successfully in Google Sheets' });
   } catch (error) {
     res.status(500).json({ message: 'Failed to update record', error: error.message });

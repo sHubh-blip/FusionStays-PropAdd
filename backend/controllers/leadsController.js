@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const requireAuth = require('../middleware/auth');
 const { initializeSheets } = require('../services/googleSheets');
+const cache = require('../services/cache');
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, '..', 'uploads');
@@ -40,10 +41,20 @@ let mockLeadsDatabase = [
 
 // Helper to get raw data
 const fetchLeadsSheet = async () => {
+  const cachedLeads = cache.get('all_leads');
+
   const doc = await initializeSheets();
   if (!doc) return { mock: true, rows: mockLeadsDatabase, sheet: null };
   
   // Try to find sheet by title 'Internal Leads'
+  if (!doc.sheetsByTitle['Internal Leads']) {
+    try {
+      await doc.loadInfo();
+    } catch (e) {
+      console.warn("loadInfo failed:", e.message);
+    }
+  }
+
   let sheet = doc.sheetsByTitle['Internal Leads'];
   
   // Create if it doesn't exist
@@ -55,9 +66,12 @@ const fetchLeadsSheet = async () => {
         headerValues: ['Date Added', 'Screenshot URL', 'Name of Property', 'Link to Property', 'Phone Number', 'Assigned To', 'Location', 'Status']
       });
     } catch (e) {
-      console.warn("Could not create 'Internal Leads' worksheet, falling back:", e.message);
-      if (doc.sheetCount > 1) {
-        sheet = doc.sheetsByIndex[1];
+      console.warn("Could not create 'Internal Leads' worksheet, refreshing sheet info:", e.message);
+      try {
+        await doc.loadInfo();
+        sheet = doc.sheetsByTitle['Internal Leads'];
+      } catch (err) {
+        console.error("Failed to load sheet 'Internal Leads':", err.message);
       }
     }
   }
@@ -65,6 +79,10 @@ const fetchLeadsSheet = async () => {
   if (!sheet) {
       console.warn("Internal Leads sheet not found. Falling back to mock.");
       return { mock: true, rows: mockLeadsDatabase, sheet: null };
+  }
+
+  if (cachedLeads) {
+    return { mock: false, rows: cachedLeads, sheet };
   }
 
   // Ensure all required headers exist
@@ -99,6 +117,7 @@ const fetchLeadsSheet = async () => {
   
   // Sort descending by rowIndex/id so newest is first
   rowData.sort((a, b) => b._rowIndex - a._rowIndex);
+  cache.set('all_leads', rowData, 120); // Cache leads for 2 minutes
   
   return { mock: false, rows: rowData, sheet };
 };
@@ -110,8 +129,10 @@ router.get('/leads', requireAuth, async (req, res) => {
     let rows = data.mock ? [...data.rows].reverse() : data.rows;
 
     const userRole = (req.user?.role || '').toLowerCase();
-    // Non-admin & Non-team_member (e.g., prop_add / PA): only return leads assigned to the requesting user
-    if (userRole !== 'admin' && userRole !== 'team_member') {
+    // admin, team_member, prop_add, prop/add, pa: full access to internal leads
+    const isFullAccessRole = ['admin', 'team_member', 'prop_add', 'prop/add', 'pa', 'property_adder'].includes(userRole);
+
+    if (!isFullAccessRole) {
       const userEmail = (req.user?.email || '').toLowerCase();
       const userUsername = userEmail.split('@')[0];
       const isAssignee = (assignedToVal) => {
@@ -156,6 +177,7 @@ router.post('/leads', requireAuth, upload.single('screenshot'), async (req, res)
     if (!sheet) throw new Error('Sheet not found for append');
     
     await sheet.addRow(newLead);
+    cache.del('all_leads');
     res.status(201).json({ message: 'Lead added to Google Sheets', lead: newLead });
   } catch (error) {
     res.status(500).json({ message: 'Failed to upload lead', error: error.message });
@@ -234,6 +256,7 @@ router.put('/leads/:id', requireAuth, async (req, res) => {
     if (req.body['Location'] !== undefined) rowToUpdate.assign({ "Location": req.body['Location'] });
 
     await rowToUpdate.save();
+    cache.del('all_leads');
     res.json({ message: 'Lead updated successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Failed to update lead', error: error.message });

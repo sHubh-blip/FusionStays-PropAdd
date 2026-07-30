@@ -58,33 +58,34 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   
-  // Initialize Users Sheet and seed default admin if empty
-  const { getUserSheet } = require('./services/user');
-  getUserSheet().catch(err => console.error("Failed to initialize Users sheet on startup:", err.message));
-  
-  // Initialize Messages Sheet and load history cache
-  const { initializeMessageHistory } = require('./services/messageService');
-  initializeMessageHistory().catch(err => console.error("Failed to initialize message history cache on startup:", err.message));
-  
-  // Task 4: Background Prefetch Worker
   const { fetchAndMapRecords } = require('./services/sheetService');
-  const PREFETCH_INTERVAL = 45 * 1000; // 45s
+  const { getUserSheet } = require('./services/user');
+  const { initializeMessageHistory } = require('./services/messageService');
+  const PREFETCH_INTERVAL = 3 * 60 * 1000; // 3 minutes to stay within Google API quota limits
   
-  async function prefetchSheetData() {
+  async function initializeServerData() {
     try {
       console.log('[Prefetch] Refreshing cache from Google Sheets...');
       const records = await fetchAndMapRecords();
       
       if (records) {
-        cache.set('all_records', records, 60);
+        cache.set('all_records', records, 300); // 5 min TTL
         console.log(`[Prefetch] Successfully cached ${records.length} records`);
       }
     } catch (err) {
       console.error('[Prefetch] Failed:', err.message);
     }
+
+    setTimeout(() => {
+      getUserSheet().catch(err => console.error("Failed to initialize Users sheet:", err.message));
+    }, 2000);
+
+    setTimeout(() => {
+      initializeMessageHistory().catch(err => console.error("Failed to initialize Message history:", err.message));
+    }, 4000);
   }
 
-  // Initial prefetch and set interval
-  prefetchSheetData();
-  setInterval(prefetchSheetData, PREFETCH_INTERVAL);
+  // Initial prefetch and set 3-minute interval
+  initializeServerData();
+  setInterval(initializeServerData, PREFETCH_INTERVAL);
 });
