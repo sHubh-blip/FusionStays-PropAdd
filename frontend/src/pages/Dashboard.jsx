@@ -501,19 +501,17 @@ const Dashboard = () => {
                 </button>
                 <button
                   onClick={() => navigate('/reports')}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl py-2.5 px-4 shadow-md hover:shadow-lg transition-all flex items-center flex-shrink-0 transform hover:-translate-y-0.5 active:translate-y-0 text-xs sm:text-sm"
-                  title="Go to Report Dashboard"
+                  className="p-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center flex-shrink-0 transform hover:-translate-y-0.5 active:translate-y-0"
+                  title="Report Dashboard"
                 >
-                  <BarChart className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Report Dashboard</span>
+                  <BarChart className="w-5 h-5" />
                 </button>
                 <button
                   onClick={() => setIsEODModalOpen(true)}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl py-2.5 px-4 shadow-md hover:shadow-lg transition-all flex items-center flex-shrink-0 transform hover:-translate-y-0.5 active:translate-y-0 text-xs sm:text-sm"
-                  title="Open EOD Generator"
+                  className="p-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center flex-shrink-0 transform hover:-translate-y-0.5 active:translate-y-0"
+                  title="EOD Generator"
                 >
-                  <FileText className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">EOD Generator</span>
+                  <FileText className="w-5 h-5" />
                 </button>
                 <button
                   onClick={() => navigate('/leads')}
