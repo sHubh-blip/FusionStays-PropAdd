@@ -278,9 +278,32 @@ router.put('/records/:id', requireAuth, async (req, res) => {
       req.body['Live Date'] = getTodayISTFormatted();
     }
 
+    const userRole = (req.user?.role || '').toLowerCase();
+    const userEmail = (req.user?.email || '').toLowerCase();
+    const userName = (req.user?.name || '').toLowerCase();
+    const userUsername = userEmail.split('@')[0];
+    const isPropAddRole = ['prop_add', 'prop/add', 'pa', 'property_adder'].includes(userRole);
+
+    const isAssignee = (assignedPersonVal) => {
+      if (!assignedPersonVal) return false;
+      const target = assignedPersonVal.trim().toLowerCase();
+      if (!target || target === 'agent' || target === 'unassigned') return false;
+      if (userEmail && target === userEmail) return true;
+      if (userUsername && target === userUsername) return true;
+      if (userName && target === userName) return true;
+      if (userEmail && (userEmail.startsWith(target) || target.includes(userUsername))) return true;
+      if (userName && (userName.startsWith(target) || target.includes(userName))) return true;
+      return false;
+    };
+
     if (!doc) {
       const index = mockDatabase.findIndex(r => r._id === id);
       if (index === -1) return res.status(404).json({ message: 'Mock record not found' });
+      
+      if (isPropAddRole && !isAssignee(mockDatabase[index]['Name of Person'])) {
+        return res.status(403).json({ message: 'You can only edit properties assigned to you.' });
+      }
+
       mockDatabase[index] = { ...mockDatabase[index], ...req.body, _id: id };
       cache.del(CACHE_KEY);
       return res.json({ message: 'Mock record updated', record: mockDatabase[index] });
@@ -295,6 +318,10 @@ router.put('/records/:id', requireAuth, async (req, res) => {
 
     if (!rowToUpdate) {
       return res.status(404).json({ message: 'Row not found in Google Sheets' });
+    }
+
+    if (isPropAddRole && !isAssignee(rowToUpdate.get('Name of Person'))) {
+      return res.status(403).json({ message: 'You can only edit properties assigned to you.' });
     }
 
     const oldStatus = (rowToUpdate.get('Status') || '').trim().toLowerCase();

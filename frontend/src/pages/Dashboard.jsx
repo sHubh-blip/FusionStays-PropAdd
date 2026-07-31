@@ -569,6 +569,7 @@ const Dashboard = () => {
                   <div className="flex-1">
                     <RecordTable
                       records={records}
+                      user={user}
                       onEdit={handleEdit}
                       onStatusChange={handleStatusChange}
                       onPersonChange={handlePersonChange}

@@ -1,5 +1,5 @@
 import React, { memo, useMemo } from 'react';
-import { MoreVertical, Edit2, MapPin } from 'lucide-react';
+import { MoreVertical, Edit2, MapPin, Lock } from 'lucide-react';
 import { getTodayIST, normalizeDate } from '../utils/dateUtils';
 
 const statusColors = {
@@ -42,6 +42,7 @@ const defaultStatuses = [
 
 const RecordTable = ({ 
   records, 
+  user,
   onEdit, 
   onStatusChange, 
   onPersonChange, 
@@ -60,6 +61,31 @@ const RecordTable = ({
   endDate = '',
   setEndDate
 }) => {
+  const userRole = (user?.role || '').toLowerCase();
+  const isPropAddUser = ['prop_add', 'prop/add', 'pa', 'property_adder'].includes(userRole);
+
+  const isAssignee = (assignedPersonVal) => {
+    if (!assignedPersonVal) return false;
+    const target = assignedPersonVal.trim().toLowerCase();
+    if (!target || target === 'agent' || target === 'unassigned') return false;
+
+    const uEmail = (user?.email || '').toLowerCase();
+    const uName = (user?.name || '').toLowerCase();
+    const uUsername = uEmail.split('@')[0];
+
+    if (uEmail && target === uEmail) return true;
+    if (uUsername && target === uUsername) return true;
+    if (uName && target === uName) return true;
+    if (uEmail && (uEmail.startsWith(target) || target.includes(uUsername))) return true;
+    if (uName && (uName.startsWith(target) || target.includes(uName))) return true;
+    return false;
+  };
+
+  const canEditRecord = (record) => {
+    if (!isPropAddUser) return true;
+    return isAssignee(record['Name of Person']);
+  };
+
   const allStatuses = useMemo(() => {
     const fromRecords = (records || []).map(r => r["Status"]).filter(Boolean);
     return Array.from(new Set([...defaultStatuses, ...fromRecords]));
@@ -185,6 +211,7 @@ const RecordTable = ({
             const isLive = (record['Status'] || '').trim().toLowerCase() === 'live';
             const liveNormalized = normalizeDate(record['Live Date']);
             const isLiveToday = isLive && liveNormalized === getTodayIST();
+            const canEdit = canEditRecord(record);
             
             return (
               <tr key={record._id || record._rowIndex || idx} className={`transition-colors group ${isLiveToday ? 'bg-emerald-100/90 hover:bg-emerald-200/90 border-l-4 border-emerald-600' : 'hover:bg-slate-300/80'}`}>
@@ -196,8 +223,10 @@ const RecordTable = ({
                     <div className="relative inline-block mt-1 text-[10px]">
                       <select 
                         value={record['Name of Person'] || ''}
+                        disabled={!canEdit}
                         onChange={(e) => onPersonChange && onPersonChange(record, e.target.value)}
-                        className={`appearance-none bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-1.5 py-0.5 pr-5 rounded border border-transparent focus:outline-none focus:ring-1 focus:ring-indigo-300 cursor-pointer transition-colors font-semibold`}
+                        title={!canEdit ? "You can only edit properties assigned to you" : ""}
+                        className={`appearance-none bg-indigo-50 text-indigo-700 ${canEdit ? 'hover:bg-indigo-100 cursor-pointer' : 'opacity-60 cursor-not-allowed'} px-1.5 py-0.5 pr-5 rounded border border-transparent focus:outline-none focus:ring-1 focus:ring-indigo-300 transition-colors font-semibold`}
                       >
                         <option value="" disabled>Agent</option>
                         {uniquePersons.map(p => (
@@ -231,8 +260,10 @@ const RecordTable = ({
                   <div className="relative inline-block w-full max-w-[170px]">
                     <select 
                       value={record['Status'] || 'Yet to Call'}
+                      disabled={!canEdit}
                       onChange={(e) => onStatusChange && onStatusChange(record, e.target.value)}
-                      className={`appearance-none w-full px-3 py-1.5 rounded-full text-xs font-semibold border focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer shadow-sm ${statusColor}`}
+                      title={!canEdit ? "You can only edit properties assigned to you" : ""}
+                      className={`appearance-none w-full px-3 py-1.5 rounded-full text-xs font-semibold border focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm ${statusColor} ${!canEdit ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
                     >
                       {allStatuses.map(s => (
                         <option key={s} value={s} className="bg-white text-slate-900">{s}</option>
@@ -262,13 +293,23 @@ const RecordTable = ({
                 </td>
                 
                 <td className="py-1.5 px-4 text-right">
-                  <button 
-                    onClick={() => onEdit(record)}
-                    className="p-1.5 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors inline-flex focus:outline-none"
-                    title="Edit Record"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
+                  {canEdit ? (
+                    <button 
+                      onClick={() => onEdit(record)}
+                      className="p-1.5 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors inline-flex focus:outline-none cursor-pointer"
+                      title="Edit Record"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <button 
+                      disabled
+                      className="p-1.5 text-slate-300 rounded-lg inline-flex cursor-not-allowed opacity-40"
+                      title="You can only edit properties assigned to you"
+                    >
+                      <Lock className="w-4 h-4 text-slate-400" />
+                    </button>
+                  )}
                 </td>
               </tr>
             );
