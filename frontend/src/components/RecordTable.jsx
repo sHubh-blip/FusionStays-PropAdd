@@ -212,7 +212,16 @@ const RecordTable = ({
             const liveNormalized = normalizeDate(record['Live Date']);
             const isLiveToday = isLive && liveNormalized === getTodayIST();
             const canEdit = canEditRecord(record);
-            
+            const isAdmin = userRole === 'admin';
+            const recordStatusLower = (record['Status'] || '').trim().toLowerCase();
+
+            const selectableStatuses = allStatuses.filter(s => {
+              if (isAdmin) return true;
+              const sLower = s.trim().toLowerCase();
+              if (sLower === 'live' && recordStatusLower !== 'live') return false;
+              return true;
+            });
+
             return (
               <tr key={record._id || record._rowIndex || idx} className={`transition-colors group ${isLiveToday ? 'bg-emerald-100/90 hover:bg-emerald-200/90 border-l-4 border-emerald-600' : 'hover:bg-slate-300/80'}`}>
                 <td className="py-1.5 px-4 align-top">
@@ -265,12 +274,12 @@ const RecordTable = ({
                       title={!canEdit ? "You can only edit properties assigned to you" : ""}
                       className={`appearance-none w-full px-3 py-1.5 rounded-full text-xs font-semibold border focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm ${statusColor} ${!canEdit ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
                     >
-                      {allStatuses.map(s => (
+                      {selectableStatuses.map(s => (
                         <option key={s} value={s} className="bg-white text-slate-900">{s}</option>
                       ))}
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2">
-                       <svg className={`h-4 w-4 ${statusColor?.includes('text-white') ? 'text-white' : 'text-slate-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <svg className={`h-4 w-4 ${statusColor?.includes('text-[#ffffff]') || statusColor?.includes('text-white') ? 'text-white' : 'text-slate-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
                        </svg>
                     </div>

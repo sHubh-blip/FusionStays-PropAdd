@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useContext, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AuthContext } from '../context/AuthContext';
@@ -171,6 +171,29 @@ const Dashboard = () => {
     return Array.from(merged).filter(name => name.toLowerCase() !== 'agent').sort();
   }, [allRecords, dropdownsData, usersListData]);
 
+  const hasInitializedFilterRef = useRef(false);
+
+  // Default personFilter to logged-in user if their role is prop/add
+  useEffect(() => {
+    if (hasInitializedFilterRef.current) return;
+    const userRole = (user?.role || '').toLowerCase();
+    const isPropAddRole = ['prop_add', 'prop/add', 'pa', 'property_adder'].includes(userRole);
+
+    if (isPropAddRole && user) {
+      let personName = (user.name || '').trim();
+      if (!personName && user.email) {
+        const parts = user.email.split('@')[0];
+        personName = parts.charAt(0).toUpperCase() + parts.slice(1);
+      }
+
+      if (personName) {
+        const match = uniquePersons.find(p => p.toLowerCase() === personName.toLowerCase());
+        setPersonFilter(match || personName);
+        hasInitializedFilterRef.current = true;
+      }
+    }
+  }, [user, uniquePersons]);
+
   const uniqueLocations = useMemo(() => {
     const fromRecords = allRecords.map(r => r["Location"]).filter(Boolean);
     const fromDropdowns = dropdownsData?.location?.values || [];
@@ -204,7 +227,7 @@ const Dashboard = () => {
       ]);
     } catch (error) {
       console.error('Failed to update status', error);
-      alert('Failed to update status.');
+      alert(error.response?.data?.message || 'Failed to update status.');
     }
   }, [queryClient]);
 

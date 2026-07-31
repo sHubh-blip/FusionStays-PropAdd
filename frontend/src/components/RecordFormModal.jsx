@@ -413,14 +413,26 @@ const RecordFormModal = ({ record, onClose, onSave, user, uniqueLocations = [], 
             </div>
 
             <InputWrapper label="Status" error={errors['Status']}>
-               <SearchableSelect 
-                 name="Status"
-                 value={formData['Status']}
-                 onChange={handleChange}
-                 options={STATUS_OPTIONS}
-                 allowCustom={false}
-                 placeholder="Select status..."
-               />
+               {(() => {
+                 const isAdmin = (user?.role || '').toLowerCase() === 'admin';
+                 const recordStatusLower = (record?.['Status'] || '').trim().toLowerCase();
+                 const selectableStatusOptions = STATUS_OPTIONS.filter(opt => {
+                   if (isAdmin) return true;
+                   const optLower = opt.trim().toLowerCase();
+                   if (optLower === 'live' && recordStatusLower !== 'live') return false;
+                   return true;
+                 });
+                 return (
+                   <SearchableSelect 
+                     name="Status"
+                     value={formData['Status']}
+                     onChange={handleChange}
+                     options={selectableStatusOptions}
+                     allowCustom={false}
+                     placeholder="Select status..."
+                   />
+                 );
+               })()}
             </InputWrapper>
 
             <div className="md:col-span-2">

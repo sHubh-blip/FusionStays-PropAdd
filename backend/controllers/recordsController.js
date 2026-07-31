@@ -218,7 +218,15 @@ router.post('/records', requireAuth, async (req, res) => {
       req.body["Status"] ? ensureDropdownValue('status', req.body["Status"]) : null,
     ]);
 
-    const isLive = ['live', 'already live'].includes((req.body['Status'] || '').trim().toLowerCase());
+    const userRole = (req.user?.role || '').toLowerCase();
+    const newStatus = (req.body['Status'] || '').trim().toLowerCase();
+
+    // Restrict setting status to Live strictly to Admins
+    if (newStatus === 'live' && userRole !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can set property status to Live.' });
+    }
+
+    const isLive = ['live', 'already live'].includes(newStatus);
     let liveDate = req.body['Live Date'] || '';
     if (isLive) {
       liveDate = getTodayISTFormatted();
@@ -304,6 +312,11 @@ router.put('/records/:id', requireAuth, async (req, res) => {
         return res.status(403).json({ message: 'You can only edit properties assigned to you.' });
       }
 
+      const mockOldStatus = (mockDatabase[index]['Status'] || '').trim().toLowerCase();
+      if (req.body['Status'] !== undefined && newStatus === 'live' && mockOldStatus !== 'live' && userRole !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can change property status to Live.' });
+      }
+
       mockDatabase[index] = { ...mockDatabase[index], ...req.body, _id: id };
       cache.del(CACHE_KEY);
       return res.json({ message: 'Mock record updated', record: mockDatabase[index] });
@@ -325,6 +338,9 @@ router.put('/records/:id', requireAuth, async (req, res) => {
     }
 
     const oldStatus = (rowToUpdate.get('Status') || '').trim().toLowerCase();
+    if (req.body['Status'] !== undefined && newStatus === 'live' && oldStatus !== 'live' && userRole !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can change property status to Live.' });
+    }
 
     // If status is updated to Live or set to Live without a valid date
     if (newStatus === 'live') {
