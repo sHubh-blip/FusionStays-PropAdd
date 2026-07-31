@@ -26,9 +26,9 @@ router.post('/login', async (req, res) => {
     if (inputHash === user.passwordHash) {
       const secret = process.env.JWT_SECRET || 'fallback_secret_for_dev_only';
       
-      // Create token including email and role (expires in 8h)
+      // Create token including email, role, and name (expires in 8h)
       const token = jwt.sign(
-        { email: user.email, role: user.role }, 
+        { email: user.email, role: user.role, name: user.name || (user.email ? user.email.split('@')[0] : '') }, 
         secret, 
         { expiresIn: '8h' }
       );
@@ -38,7 +38,8 @@ router.post('/login', async (req, res) => {
         token, 
         user: { 
           email: user.email, 
-          role: user.role 
+          role: user.role,
+          name: user.name || (user.email ? user.email.split('@')[0] : '')
         } 
       });
     } else {

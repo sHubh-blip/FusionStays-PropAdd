@@ -41,10 +41,11 @@ const InternalLeads = () => {
     if (uUsername && target === uUsername) return true;
     if (uName && target === uName) return true;
     if (uEmail && (uEmail.startsWith(target) || target.includes(uUsername))) return true;
+    if (uName && (uName.startsWith(target) || target.includes(uName))) return true;
     return false;
   };
 
-  const canChangeStatus = (lead) => isAdmin || isTeamMember || isPropAdd || isAssignee(lead['Assigned To']);
+  const canChangeStatus = (lead) => isAdmin || isTeamMember || isAssignee(lead['Assigned To']);
 
   const fetchLeads = async () => {
     setIsLoading(true);
@@ -52,7 +53,7 @@ const InternalLeads = () => {
       const { data } = await api.get('/leads');
       const allLeads = Array.isArray(data) ? data : [];
       const userRole = user?.role?.toLowerCase();
-      const isFullAccess = ['admin', 'team_member', 'prop_add', 'prop/add', 'pa', 'property_adder'].includes(userRole);
+      const isFullAccess = ['admin', 'team_member'].includes(userRole);
       const visibleLeads = isFullAccess ? allLeads : allLeads.filter(lead => isAssignee(lead['Assigned To']));
       setLeads(visibleLeads);
     } catch (error) {

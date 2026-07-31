@@ -129,17 +129,23 @@ router.get('/leads', requireAuth, async (req, res) => {
     let rows = data.mock ? [...data.rows].reverse() : data.rows;
 
     const userRole = (req.user?.role || '').toLowerCase();
-    // admin, team_member, prop_add, prop/add, pa: full access to internal leads
-    const isFullAccessRole = ['admin', 'team_member', 'prop_add', 'prop/add', 'pa', 'property_adder'].includes(userRole);
+    // admin and team_member have full access to view internal leads
+    const isFullAccessRole = ['admin', 'team_member'].includes(userRole);
 
     if (!isFullAccessRole) {
       const userEmail = (req.user?.email || '').toLowerCase();
+      const userName = (req.user?.name || '').toLowerCase();
       const userUsername = userEmail.split('@')[0];
       const isAssignee = (assignedToVal) => {
         if (!assignedToVal) return false;
         const target = assignedToVal.trim().toLowerCase();
         if (!target || target === 'unassigned') return false;
-        return target === userEmail || target === userUsername || userEmail.startsWith(target) || target.includes(userUsername);
+        if (userEmail && target === userEmail) return true;
+        if (userUsername && target === userUsername) return true;
+        if (userName && target === userName) return true;
+        if (userEmail && (userEmail.startsWith(target) || target.includes(userUsername))) return true;
+        if (userName && (userName.startsWith(target) || target.includes(userName))) return true;
+        return false;
       };
       rows = rows.filter(lead => isAssignee(lead['Assigned To']));
     }
@@ -191,6 +197,7 @@ router.put('/leads/:id', requireAuth, async (req, res) => {
     const id = req.params.id;
     const userRole = (req.user?.role || '').toLowerCase();
     const userEmail = (req.user?.email || '').toLowerCase();
+    const userName = (req.user?.name || '').toLowerCase();
     const userUsername = userEmail.split('@')[0];
 
     // Helper to check if current user is assignee
@@ -198,7 +205,12 @@ router.put('/leads/:id', requireAuth, async (req, res) => {
       if (!assignedToVal) return false;
       const target = assignedToVal.trim().toLowerCase();
       if (!target || target === 'unassigned') return false;
-      return target === userEmail || target === userUsername || userEmail.startsWith(target) || target.includes(userUsername);
+      if (userEmail && target === userEmail) return true;
+      if (userUsername && target === userUsername) return true;
+      if (userName && target === userName) return true;
+      if (userEmail && (userEmail.startsWith(target) || target.includes(userUsername))) return true;
+      if (userName && (userName.startsWith(target) || target.includes(userName))) return true;
+      return false;
     };
 
     if (!doc) {

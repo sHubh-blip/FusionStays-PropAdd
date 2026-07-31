@@ -79,6 +79,7 @@ async function findUserByEmail(email) {
 
   return {
     email: foundRow.get('email'),
+    name: foundRow.get('name') || '',
     passwordHash: foundRow.get('passwordHash'),
     salt: foundRow.get('salt'),
     role: foundRow.get('role'),
