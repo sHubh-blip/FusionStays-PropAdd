@@ -92,11 +92,11 @@ function DropdownPanel({ columnKey, label, values = [], allRecords = [] }) {
   const isLoading = addMut.isPending || delMut.isPending || renameMut.isPending;
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between h-full">
+    <div className="bg-white border border-[#CBCBCB] rounded-2xl p-5 shadow-lg flex flex-col justify-between h-full text-[#4A4A4A]">
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-bold text-slate-800 text-base">{label}</h3>
-          <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+          <h3 className="font-extrabold text-[#4A4A4A] text-base">{label}</h3>
+          <span className="text-xs font-bold text-white bg-[#6D8196] px-2.5 py-0.5 rounded-full shadow-xs">
             {values.length} options
           </span>
         </div>
@@ -110,12 +110,12 @@ function DropdownPanel({ columnKey, label, values = [], allRecords = [] }) {
             onKeyDown={e => e.key === 'Enter' && handleAdd()}
             placeholder={`Add new ${label.toLowerCase()}...`}
             disabled={isLoading}
-            className="flex-1 min-w-0 bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-brand-500 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none transition-all"
+            className="flex-1 min-w-0 bg-[#F4F5F7] border border-[#CBCBCB] focus:bg-white focus:ring-2 focus:ring-[#6D8196] rounded-xl px-3 py-2 text-xs font-semibold text-[#4A4A4A] placeholder-[#6D8196]/50 focus:outline-none transition-all"
           />
           <button
             onClick={handleAdd}
             disabled={!newEntry.trim() || isLoading}
-            className="flex-shrink-0 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl px-3 py-2 text-xs transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-shrink-0 bg-[#6D8196] hover:bg-[#4A4A4A] text-white font-bold rounded-xl px-3 py-2 text-xs transition-all flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add</span>
@@ -125,12 +125,12 @@ function DropdownPanel({ columnKey, label, values = [], allRecords = [] }) {
         {/* Current values list */}
         <ul className="space-y-1.5 max-h-[360px] overflow-y-auto custom-scrollbar pr-1">
           {values.map(val => (
-            <li key={val} className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition-colors group">
+            <li key={val} className="flex items-center justify-between p-2 rounded-xl hover:bg-[#F4F5F7] border border-transparent hover:border-[#CBCBCB]/40 transition-colors group">
               {renaming?.old === val ? (
                 // Inline rename input
                 <div className="flex items-center gap-2 flex-1">
                   <input
-                    className="flex-1 bg-white border border-brand-500 rounded-lg px-2.5 py-1 text-xs font-medium focus:outline-none"
+                    className="flex-1 bg-white border border-[#6D8196] text-[#4A4A4A] rounded-lg px-2.5 py-1 text-xs font-semibold focus:outline-none"
                     value={renaming.new}
                     onChange={e => setRenaming(r => ({ ...r, new: e.target.value }))}
                     onKeyDown={e => {
@@ -139,7 +139,7 @@ function DropdownPanel({ columnKey, label, values = [], allRecords = [] }) {
                     }}
                     autoFocus
                   />
-                  <button onClick={submitRename} disabled={isLoading} className="text-emerald-600 hover:bg-emerald-50 p-1 rounded-md">
+                  <button onClick={submitRename} disabled={isLoading} className="text-emerald-700 hover:bg-emerald-100 p-1 rounded-md">
                     <Check className="w-4 h-4" />
                   </button>
                   <button onClick={() => setRenaming(null)} className="text-slate-400 hover:bg-slate-100 p-1 rounded-md">
@@ -150,15 +150,15 @@ function DropdownPanel({ columnKey, label, values = [], allRecords = [] }) {
                 // Normal display
                 <>
                   <div className="flex items-center gap-2 flex-1 overflow-hidden">
-                    <span className="text-xs font-semibold text-slate-700 truncate">{val}</span>
-                    <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md flex-shrink-0">
+                    <span className="text-xs font-semibold text-[#4A4A4A] truncate">{val}</span>
+                    <span className="text-[10px] font-bold text-[#4A4A4A] bg-[#CBCBCB]/60 px-1.5 py-0.5 rounded-md flex-shrink-0">
                       {getCount(val)}
                     </span>
                   </div>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => handleRename(val)}
-                      className="p-1 text-slate-400 hover:text-brand-600 hover:bg-slate-100 rounded-md transition-colors"
+                      className="p-1 text-[#6D8196] hover:text-[#4A4A4A] hover:bg-[#CBCBCB]/30 rounded-md transition-colors"
                       title="Rename"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
@@ -166,7 +166,7 @@ function DropdownPanel({ columnKey, label, values = [], allRecords = [] }) {
                     <button
                       onClick={() => handleDelete(val)}
                       disabled={isLoading}
-                      className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors disabled:opacity-50"
+                      className="p-1 text-[#6D8196] hover:text-rose-600 hover:bg-rose-100 rounded-md transition-colors disabled:opacity-50"
                       title="Delete"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -177,7 +177,7 @@ function DropdownPanel({ columnKey, label, values = [], allRecords = [] }) {
             </li>
           ))}
           {values.length === 0 && (
-            <li className="text-center py-6 text-xs text-slate-400 italic">No options yet. Add one above.</li>
+            <li className="text-center py-6 text-xs text-[#6D8196] italic">No options yet. Add one above.</li>
           )}
         </ul>
       </div>
@@ -254,18 +254,22 @@ export default function DropdownManager() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-[#F4F5F7] p-4 sm:p-6 lg:p-8 text-[#4A4A4A] font-sans relative overflow-hidden">
+      {/* Soft Ambient Accents */}
+      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#6D8196]/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-[#CBCBCB]/20 rounded-full blur-[120px] pointer-events-none" />
+
+      <div className="max-w-6xl mx-auto z-10 relative">
         <div className="flex items-center mb-6">
           <button 
             onClick={() => navigate('/dashboard')} 
-            className="mr-4 p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-100 transition shadow-sm"
+            className="mr-4 p-2 bg-[#4A4A4A] border border-[#6D8196]/40 text-white rounded-xl hover:bg-[#6D8196] transition shadow-md"
           >
-            <ChevronLeft className="w-5 h-5 text-slate-600" />
+            <ChevronLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">Dropdown Manager</h1>
-            <p className="text-slate-500 text-xs mt-1">
+            <h1 className="text-2xl font-extrabold text-[#4A4A4A] tracking-tight">Dropdown Manager</h1>
+            <p className="text-[#6D8196] text-xs font-semibold mt-1">
               Add, remove, or rename options for any dropdown column. Changes sync to Google Sheets instantly.
             </p>
           </div>
@@ -273,8 +277,8 @@ export default function DropdownManager() {
 
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-brand-600 animate-spin mb-2" />
-            <p className="text-slate-500 text-xs font-semibold">Loading dropdown options...</p>
+            <Loader2 className="w-8 h-8 text-[#6D8196] animate-spin mb-2" />
+            <p className="text-[#6D8196] text-xs font-semibold">Loading dropdown options...</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
