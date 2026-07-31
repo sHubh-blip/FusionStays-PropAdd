@@ -7,9 +7,10 @@ import App from './App.jsx'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30000,      // consider data fresh for 30s
+      staleTime: 10000,      // consider data fresh for 10s
       gcTime: 5 * 60000,     // keep in memory for 5 mins
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true, // auto sync when returning to tab
+      refetchInterval: 15000, // background auto-sync every 15s for concurrent team members
       retry: 2,
     },
   },

@@ -48,17 +48,23 @@ async function getUserSheet() {
   return sheet;
 }
 
-// Find user by email
+// Find user by email (with in-memory caching for instant logins)
 async function findUserByEmail(email) {
   if (!email) return null;
+  const searchEmail = email.toLowerCase().trim();
+  const cacheKey = `user_auth_${searchEmail}`;
+  
+  const cachedUser = cache.get(cacheKey);
+  if (cachedUser) return cachedUser;
+
   const sheet = await getUserSheet();
   if (!sheet) {
     // Mock Mode fallback
     const mockAdminEmail = (process.env.ADMIN_EMAIL || 'admin@fusionstays.com').toLowerCase().trim();
-    if (email.toLowerCase().trim() === mockAdminEmail) {
+    if (searchEmail === mockAdminEmail) {
       const mockAdminPassword = process.env.ADMIN_PASSWORD || 'securepassword123';
       const salt = 'mocksalt';
-      return {
+      const mockUser = {
         email: mockAdminEmail,
         passwordHash: hashPassword(mockAdminPassword, salt),
         salt,
@@ -67,17 +73,18 @@ async function findUserByEmail(email) {
         createdAt: new Date().toISOString(),
         isMock: true
       };
+      cache.set(cacheKey, mockUser, 300);
+      return mockUser;
     }
     return null;
   }
 
   const rows = await sheet.getRows();
-  const searchEmail = email.toLowerCase().trim();
   const foundRow = rows.find(r => (r.get('email') || '').toLowerCase().trim() === searchEmail);
 
   if (!foundRow) return null;
 
-  return {
+  const userData = {
     email: foundRow.get('email'),
     name: foundRow.get('name') || '',
     passwordHash: foundRow.get('passwordHash'),
@@ -87,6 +94,9 @@ async function findUserByEmail(email) {
     createdAt: foundRow.get('createdAt'),
     _row: foundRow // Reference to save updates
   };
+
+  cache.set(cacheKey, userData, 300); // 5 min cache
+  return userData;
 }
 
 // List all users
@@ -215,6 +225,8 @@ async function updateUser(email, updates) {
   }
 
   await row.save();
+  cache.del('all_users');
+  cache.del(`user_auth_${email.toLowerCase().trim()}`);
   return {
     email: row.get('email'),
     name: row.get('name'),
@@ -231,11 +243,15 @@ async function deleteUser(email) {
 
   if (user.isMock) {
     console.log("Mock Mode: User deleted", email);
+    cache.del('all_users');
+    cache.del(`user_auth_${email.toLowerCase().trim()}`);
     return true;
   }
 
   const row = user._row;
   await row.delete();
+  cache.del('all_users');
+  cache.del(`user_auth_${email.toLowerCase().trim()}`);
   return true;
 }
 
