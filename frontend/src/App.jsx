@@ -10,8 +10,11 @@ import UserManagement from './pages/UserManagement';
 import BrowserAgent from './pages/BrowserAgent';
 
 
+import SetNewPassword from './pages/SetNewPassword';
+
+
 // Protected Route wrapper with role-based restriction
-const ProtectedRoute = ({ children, allowedRoles }) => {
+const ProtectedRoute = ({ children, allowedRoles, allowPendingReset = false }) => {
   const { user, isLoading } = React.useContext(AuthContext);
 
   if (isLoading) {
@@ -24,6 +27,14 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (user.mustResetPassword && !allowPendingReset) {
+    return <Navigate to="/set-new-password" replace />;
+  }
+
+  if (!user.mustResetPassword && allowPendingReset) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
@@ -40,6 +51,14 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route
+            path="/set-new-password"
+            element={
+              <ProtectedRoute allowPendingReset={true}>
+                <SetNewPassword />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/dashboard"
             element={

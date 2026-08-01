@@ -9,7 +9,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [activeTab, setActiveTab] = useState('login');
+  const [showForgotMsg, setShowForgotMsg] = useState(false);
 
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -22,7 +22,11 @@ const Login = () => {
     const result = await login(email, password);
     
     if (result.success) {
-      navigate('/dashboard');
+      if (result.user?.mustResetPassword) {
+        navigate('/set-new-password');
+      } else {
+        navigate('/dashboard');
+      }
     } else {
       setError(result.message);
       setIsSubmitting(false);
@@ -136,11 +140,24 @@ const Login = () => {
                   </button>
                 </div>
 
+                {showForgotMsg && (
+                  <div className="bg-amber-500/20 border border-amber-400/50 text-amber-100 text-xs rounded-2xl p-3.5 animate-fade-in text-center backdrop-blur-sm relative">
+                    Please contact your administrator to reset your password.
+                    <button 
+                      type="button"
+                      onClick={() => setShowForgotMsg(false)}
+                      className="absolute top-1 right-2.5 text-white/60 hover:text-white text-xs font-bold"
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
+
                 {/* Forgot Password Link */}
                 <div className="text-right pt-1">
                   <button
                     type="button"
-                    onClick={() => alert('Please contact system administrator to reset password.')}
+                    onClick={() => setShowForgotMsg(true)}
                     className="text-xs text-white/70 hover:text-white transition-colors focus:outline-none"
                   >
                     Forgot password?

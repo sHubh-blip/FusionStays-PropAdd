@@ -44,7 +44,7 @@ const initializeSheets = async () => {
     } catch (err) {
       console.error("Failed to connect to Google Sheets:", err.message);
       initializationPromise = null; // Allow retry on failure
-      throw err;
+      return null;
     }
   })();
 

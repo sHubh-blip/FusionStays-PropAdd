@@ -42,8 +42,11 @@ export const AuthProvider = ({ children }) => {
         const userObj = JSON.parse(storedUser);
         if (decoded.role && userObj.role !== decoded.role) {
           userObj.role = decoded.role;
-          localStorage.setItem('user', JSON.stringify(userObj));
         }
+        if (decoded.mustResetPassword !== undefined) {
+          userObj.mustResetPassword = decoded.mustResetPassword;
+        }
+        localStorage.setItem('user', JSON.stringify(userObj));
         setUser(userObj);
       }
     }
@@ -61,11 +64,29 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(user));
       
       setUser(user);
-      return { success: true };
+      return { success: true, user };
     } catch (error) {
       return { 
         success: false, 
         message: error.response?.data?.message || 'Login failed'
+      };
+    }
+  };
+
+  const resetPassword = async (newPassword) => {
+    try {
+      const response = await api.post('/reset-password', { newPassword });
+      const { token, user } = response.data;
+
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      setUser(user);
+
+      return { success: true, user };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Password reset failed'
       };
     }
   };
@@ -78,7 +99,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );
