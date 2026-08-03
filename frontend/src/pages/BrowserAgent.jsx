@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import api from '../api';
 import { AuthContext } from '../context/AuthContext';
+import { getTodayIST } from '../utils/dateUtils';
 
 const BrowserAgent = () => {
   const { user } = useContext(AuthContext);
@@ -161,7 +162,7 @@ const BrowserAgent = () => {
     try {
       // Map review form to properties record schema
       const recordPayload = {
-        "Date of Entry": new Date().toISOString().split('T')[0],
+        "Date of Entry": getTodayIST(),
         "Name of Person": "AI Browser Agent",
         "Name of property": reviewForm.name,
         "Location": reviewForm.parent,

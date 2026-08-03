@@ -34,6 +34,21 @@ const fetchSheetRows = async () => {
   return { mock: false, rows: records };
 };
 
+const normalizeDateStr = (dStr) => {
+  if (!dStr || dStr === '-' || dStr === '') return '';
+  dStr = String(dStr).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dStr)) return dStr;
+  const parts = dStr.split(/[-/.]/);
+  if (parts.length === 3) {
+    let [p1, p2, p3] = parts;
+    if (p1.length === 4) return `${p1}-${p2.padStart(2, '0')}-${p3.padStart(2, '0')}`;
+    let d = p1, m = p2, y = p3;
+    if (y.length === 2) y = '20' + y;
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+  return dStr;
+};
+
 // GET all records with Pagination & Filtering (Task 2)
 router.get('/records', requireAuth, async (req, res) => {
   try {
@@ -89,20 +104,6 @@ router.get('/records', requireAuth, async (req, res) => {
     }
 
     if ((dateFilter && dateFilter !== 'all') || startDate || endDate) {
-      const normalizeDateStr = (dStr) => {
-        if (!dStr || dStr === '-') return null;
-        dStr = String(dStr).trim();
-        if (/^\d{4}-\d{2}-\d{2}$/.test(dStr)) return dStr;
-        const parts = dStr.split(/[-/.]/);
-        if (parts.length === 3) {
-          let [p1, p2, p3] = parts;
-          if (p1.length === 4) return `${p1}-${p2.padStart(2, '0')}-${p3.padStart(2, '0')}`;
-          let d = p1, m = p2, y = p3;
-          if (y.length === 2) y = '20' + y;
-          return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-        }
-        return null;
-      };
 
       // Current Date calculations in IST
       const now = new Date();
@@ -198,11 +199,11 @@ router.get('/records', requireAuth, async (req, res) => {
 
 const getTodayISTFormatted = () => {
   const options = { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' };
-  const parts = new Intl.DateTimeFormat('en-GB', options).formatToParts(new Date());
+  const parts = new Intl.DateTimeFormat('en-CA', options).formatToParts(new Date());
   const day = parts.find(p => p.type === 'day').value;
   const month = parts.find(p => p.type === 'month').value;
   const year = parts.find(p => p.type === 'year').value;
-  return `${day}/${month}/${year}`;
+  return `${year}-${month}-${day}`;
 };
 
 // POST a new record (Task 3: Invalidation)
@@ -230,10 +231,12 @@ router.post('/records', requireAuth, async (req, res) => {
     let liveDate = req.body['Live Date'] || '';
     if (isLive) {
       liveDate = getTodayISTFormatted();
+    } else {
+      liveDate = normalizeDateStr(liveDate);
     }
 
     const newRecord = {
-      "Date of Entry": req.body['Date of Entry'] || '',
+      "Date of Entry": normalizeDateStr(req.body['Date of Entry']) || getTodayISTFormatted(),
       "Name of Person": req.body['Name of Person'] || '',
       "Name of property": req.body['Name of property'] || '',
       "Location": req.body['Location'] || '',
@@ -280,6 +283,14 @@ router.put('/records/:id', requireAuth, async (req, res) => {
         req.body["Status"] ? ensureDropdownValue('status', req.body["Status"]) : null,
       ]).catch(() => {});
     });
+
+    // Normalize incoming date fields
+    if (req.body['Date of Entry'] !== undefined) {
+      req.body['Date of Entry'] = normalizeDateStr(req.body['Date of Entry']);
+    }
+    if (req.body['Live Date'] !== undefined) {
+      req.body['Live Date'] = normalizeDateStr(req.body['Live Date']);
+    }
 
     // Every time status is updated to live or already live, set Live Date to present date
     if (newStatus === 'live' || newStatus === 'already live') {
@@ -345,10 +356,13 @@ router.put('/records/:id', requireAuth, async (req, res) => {
     // If status is updated to Live or set to Live without a valid date
     if (newStatus === 'live') {
       const existingLiveDate = (req.body['Live Date'] || rowToUpdate.get('Live Date') || '').trim();
-      const isValidDate = existingLiveDate && existingLiveDate !== '-' && /^\d{1,4}[-/]\d{1,2}[-/]\d{1,4}$/.test(existingLiveDate);
+      const normalizedExisting = normalizeDateStr(existingLiveDate);
+      const isValidDate = normalizedExisting && normalizedExisting !== '-' && /^\d{4}-\d{2}-\d{2}$/.test(normalizedExisting);
 
       if (oldStatus !== 'live' || !isValidDate || !req.body['Live Date']) {
         req.body['Live Date'] = getTodayISTFormatted();
+      } else {
+        req.body['Live Date'] = normalizedExisting;
       }
     }
 

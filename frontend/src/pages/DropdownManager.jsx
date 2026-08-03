@@ -219,17 +219,15 @@ export default function DropdownManager() {
   };
 
   const getMergedValues = (key) => {
-    const apiVals = apiDropdowns[key]?.values || [];
-    const fieldName = FIELD_MAP[key];
-    const recordVals = fieldName ? allRecords.map(r => r[fieldName]).filter(Boolean) : [];
-    const defaultVals = DEFAULT_PANELS[key]?.values || [];
-    let userVals = [];
-    if (key === 'agent') {
-      userVals = usersListData.map(u => u.name || (u.email ? u.email.split('@')[0] : '')).filter(Boolean).map(n => n.charAt(0).toUpperCase() + n.slice(1));
+    const apiVals = apiDropdowns[key]?.values;
+    if (apiVals && Array.isArray(apiVals)) {
+      return apiVals
+        .filter(v => v.toLowerCase() !== key.toLowerCase() && v.toLowerCase() !== 'name of person')
+        .sort();
     }
 
-    const set = new Set([...apiVals, ...recordVals, ...userVals, ...defaultVals]);
-    return Array.from(set)
+    const defaultVals = DEFAULT_PANELS[key]?.values || [];
+    return Array.from(new Set(defaultVals))
       .filter(v => v.toLowerCase() !== key.toLowerCase() && v.toLowerCase() !== 'name of person')
       .sort();
   };

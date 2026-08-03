@@ -71,14 +71,27 @@ const EODGeneratorModal = ({ onClose }) => {
     }
 
     const selClean = selectedUser.trim().toLowerCase();
-    const selPrefix = selectedUser.includes('@') ? selectedUser.split('@')[0].trim().toLowerCase() : selClean;
+    const selUserObj = usersList.find(u => {
+      const name = (u.name || '').trim().toLowerCase();
+      const email = (u.email || '').trim().toLowerCase();
+      const uname = email.split('@')[0];
+      return name === selClean || email === selClean || uname === selClean;
+    });
 
     const matchesUser = (personVal) => {
       if (!personVal) return false;
-      const clean = personVal.trim().toLowerCase();
-      if (clean === selClean || clean === selPrefix) return true;
-      if (clean.includes(selClean) || selClean.includes(clean)) return true;
-      if (clean.includes(selPrefix) || selPrefix.includes(clean)) return true;
+      const target = personVal.trim().toLowerCase();
+      if (!target || target === 'unassigned' || target === 'agent') return false;
+
+      if (target === selClean) return true;
+      if (selUserObj) {
+        const uEmail = (selUserObj.email || '').toLowerCase();
+        const uName = (selUserObj.name || '').toLowerCase();
+        const uUsername = uEmail.split('@')[0];
+        if (uEmail && target === uEmail) return true;
+        if (uUsername && target === uUsername) return true;
+        if (uName && target === uName) return true;
+      }
       return false;
     };
 
@@ -93,58 +106,71 @@ const EODGeneratorModal = ({ onClose }) => {
     let uploadedToday = 0, uploadedMtd = 0;
     let liveToday = 0, liveMtd = 0;
 
+    // Status checking helpers based strictly on user specification
+    const isCalledStatus = (st) => {
+      return ['called', 'contacted', 'contact later', 'called but didnt answer', "called but didn't answer", 'declined'].includes(st);
+    };
+
+    const isAgreedStatus = (st) => {
+      return st === 'follow up';
+    };
+
+    const isSharedStatus = (st) => {
+      return st === 'full details received';
+    };
+
+    const isUploadedStatus = (st) => {
+      return st === 'pending for qc' || st.includes('pending for qc') || st.includes('pending_qc');
+    };
+
+    const isLiveStatus = (st) => {
+      return st === 'live' || st === 'already live';
+    };
+
     // Process Database Records
     userRecords.forEach(r => {
       const entryDate = normalizeDate(r["Date of Entry"]);
       const liveDate = normalizeDate(r["Live Date"]);
       const status = (r["Status"] || '').trim().toLowerCase();
 
-      const isTodayEntry = !entryDate || entryDate === currentEODDate;
-      const isMtdEntry = !entryDate || (entryDate && entryDate.startsWith(currentMonthPrefix));
+      const isEntryToday = entryDate === currentEODDate;
+      const isEntryMtd = Boolean(entryDate && entryDate.startsWith(currentMonthPrefix) && entryDate <= currentEODDate);
 
-      const isStrictTodayEntry = entryDate === currentEODDate;
-      const isStrictMtdEntry = entryDate && entryDate.startsWith(currentMonthPrefix);
+      const isLiveToday = (liveDate === currentEODDate) || (isEntryToday && isLiveStatus(status));
+      const isLiveMtd = Boolean((liveDate && liveDate.startsWith(currentMonthPrefix) && liveDate <= currentEODDate) || (isEntryMtd && isLiveStatus(status)));
 
-      const isTodayLive = (liveDate === currentEODDate) || (isStrictTodayEntry && (status.includes('live')));
-      const isMtdLive = (liveDate && liveDate.startsWith(currentMonthPrefix)) || (isStrictMtdEntry && (status.includes('live')));
+      // 1. Shortlisted: Total entries made by the user (Date of Entry)
+      if (isEntryToday) shortlistedToday++;
+      if (isEntryMtd) shortlistedMtd++;
 
-      // 1. Shortlisted: Total properties added by this user (all records added today / in month)
-      if (isStrictTodayEntry) shortlistedToday++;
-      if (isStrictMtdEntry) shortlistedMtd++;
-
-      // 2. Connected / Called: Status is Called
-      if (status.includes('called') || status.includes('call')) {
-        if (isStrictTodayEntry) calledToday++;
-        if (isStrictMtdEntry) calledMtd++;
+      // 2. Connected / Called: status = called, contacted, contact later, called but didn't answer, declined
+      if (isCalledStatus(status)) {
+        if (isEntryToday) calledToday++;
+        if (isEntryMtd) calledMtd++;
       }
 
-      // 3. Agreed to Partner: Status is contact++ or contact later
-      if (status.includes('contact++') || status.includes('contact later') || status.includes('contacted') || status.includes('agreed')) {
-        if (isStrictTodayEntry) agreedToday++;
-        if (isStrictMtdEntry) agreedMtd++;
+      // 3. Agreed to partner: status = follow up
+      if (isAgreedStatus(status)) {
+        if (isEntryToday) agreedToday++;
+        if (isEntryMtd) agreedMtd++;
       }
 
-      // 4. Shared all details: Status is Full Details Received ONLY
-      if (status.includes('full details received') || status.includes('full details')) {
-        if (isStrictTodayEntry) sharedToday++;
-        if (isStrictMtdEntry) sharedMtd++;
+      // 4. Shared all details: status = full details received
+      if (isSharedStatus(status)) {
+        if (isEntryToday) sharedToday++;
+        if (isEntryMtd) sharedMtd++;
       }
 
-      // 5. Uploaded: Status is Pending for QC (robust check for pending for qc, qc pending, pending_qc, etc.)
-      const isPendingQC = status.includes('pending for qc') || 
-                          status.includes('pending qc') || 
-                          status.includes('qc pending') || 
-                          (status.includes('pending') && status.includes('qc'));
-                          
-      if (isPendingQC) {
-        if (isTodayEntry) uploadedToday++;
-        if (isMtdEntry) uploadedMtd++;
+      // 5. Uploaded: status = pending for qc
+      if (isUploadedStatus(status)) {
+        if (isEntryToday) uploadedToday++;
+        if (isEntryMtd) uploadedMtd++;
       }
 
-      // 6. Live: Status is Live / Already Live
-      if (status.includes('live')) {
-        if (isTodayLive) liveToday++;
-        if (isMtdLive) liveMtd++;
+      // 6. Live: status = live
+      if (isLiveStatus(status)) {
+        if (isLiveToday) liveToday++;
+        if (isLiveMtd) liveMtd++;
       }
     });
 
@@ -153,37 +179,35 @@ const EODGeneratorModal = ({ onClose }) => {
       const addedDate = normalizeDate(l["Date Added"]);
       const status = (l["Status"] || '').trim().toLowerCase();
 
-      const isTodayAdded = !addedDate || addedDate === currentEODDate;
-      const isMtdAdded = !addedDate || (addedDate && addedDate.startsWith(currentMonthPrefix));
+      const isAddedToday = addedDate === currentEODDate;
+      const isAddedMtd = Boolean(addedDate && addedDate.startsWith(currentMonthPrefix) && addedDate <= currentEODDate);
 
-      const isStrictTodayAdded = addedDate === currentEODDate;
-      const isStrictMtdAdded = addedDate && addedDate.startsWith(currentMonthPrefix);
+      if (isAddedToday) shortlistedToday++;
+      if (isAddedMtd) shortlistedMtd++;
 
-      // Shortlisted (total added leads)
-      if (isStrictTodayAdded) shortlistedToday++;
-      if (isStrictMtdAdded) shortlistedMtd++;
-
-      // Connected / Called
-      if (status.includes('contacted') || status.includes('in progress') || status.includes('called')) {
-        if (isStrictTodayAdded) calledToday++;
-        if (isStrictMtdAdded) calledMtd++;
+      if (isCalledStatus(status)) {
+        if (isAddedToday) calledToday++;
+        if (isAddedMtd) calledMtd++;
       }
 
-      // Agreed for leads (contact++ or contact later)
-      if (status.includes('contact++') || status.includes('contact later') || status.includes('contacted')) {
-        if (isStrictTodayAdded) agreedToday++;
-        if (isStrictMtdAdded) agreedMtd++;
+      if (isAgreedStatus(status)) {
+        if (isAddedToday) agreedToday++;
+        if (isAddedMtd) agreedMtd++;
       }
 
-      // Uploaded for leads (pending for qc or added)
-      const isLeadPendingQC = status.includes('pending for qc') || 
-                              status.includes('pending qc') || 
-                              (status.includes('pending') && status.includes('qc')) ||
-                              status.includes('added');
+      if (isSharedStatus(status)) {
+        if (isAddedToday) sharedToday++;
+        if (isAddedMtd) sharedMtd++;
+      }
 
-      if (isLeadPendingQC) {
-        if (isTodayAdded) uploadedToday++;
-        if (isMtdAdded) uploadedMtd++;
+      if (isUploadedStatus(status)) {
+        if (isAddedToday) uploadedToday++;
+        if (isAddedMtd) uploadedMtd++;
+      }
+
+      if (isLiveStatus(status)) {
+        if (isAddedToday) liveToday++;
+        if (isAddedMtd) liveMtd++;
       }
     });
 
@@ -195,7 +219,7 @@ const EODGeneratorModal = ({ onClose }) => {
       uploaded: { today: uploadedToday, mtd: uploadedMtd },
       live: { today: liveToday, mtd: liveMtd }
     };
-  }, [selectedUser, records, leads, currentEODDate, currentMonthPrefix]);
+  }, [selectedUser, usersList, records, leads, currentEODDate, currentMonthPrefix]);
 
   // Copy EOD report as text/formatted spreadsheet
   const handleCopyReport = () => {
@@ -205,8 +229,8 @@ const EODGeneratorModal = ({ onClose }) => {
       `-----------------------------------------------\n` +
       `count of properties shortlisted       | ${eodReportData.shortlisted.today.toString().padStart(5)} | ${eodReportData.shortlisted.mtd.toString().padStart(5)}\n` +
       `count of properties connected/called  | ${eodReportData.called.today.toString().padStart(5)} | ${eodReportData.called.mtd.toString().padStart(5)}\n` +
-      `count of properties agreed to partner | ${eodReportData.agreed.today.toString().padStart(5)} | ${eodReportData.agreed.mtd.toString().padStart(5)}\n` +
-      `count of properties shared all details| ${eodReportData.shared.today.toString().padStart(5)} | ${eodReportData.shared.mtd.toString().padStart(5)}\n` +
+      `count of properties who agreed to partner with us | ${eodReportData.agreed.today.toString().padStart(5)} | ${eodReportData.agreed.mtd.toString().padStart(5)}\n` +
+      `count of properties who has shared all details with us | ${eodReportData.shared.today.toString().padStart(5)} | ${eodReportData.shared.mtd.toString().padStart(5)}\n` +
       `count of properties uploaded          | ${eodReportData.uploaded.today.toString().padStart(5)} | ${eodReportData.uploaded.mtd.toString().padStart(5)}\n` +
       `count of properties live              | ${eodReportData.live.today.toString().padStart(5)} | ${eodReportData.live.mtd.toString().padStart(5)}\n` +
       `-----------------------------------------------`;

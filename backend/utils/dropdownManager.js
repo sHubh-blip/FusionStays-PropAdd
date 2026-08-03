@@ -61,7 +61,7 @@ async function _readCurrentValues(columnKey) {
   const col = DROPDOWN_COLUMNS[columnKey];
   if (!col) throw new Error(`Unknown dropdown column key: "${columnKey}"`);
 
-  let values = [];
+  let values = null;
 
   try {
     const response = await sheetsAPI.spreadsheets.get({
@@ -77,36 +77,21 @@ async function _readCurrentValues(columnKey) {
     const cell = rows?.[0]?.values?.[0];
     const conditionValues = cell?.dataValidation?.condition?.values;
 
-    if (conditionValues && conditionValues.length > 0) {
+    if (conditionValues && Array.isArray(conditionValues)) {
       values = conditionValues.map(v => v.userEnteredValue).filter(Boolean);
     }
   } catch (err) {
     console.warn(`[DropdownManager] Error reading data validation for ${columnKey}:`, err.message);
   }
 
-  // Use cached records array if available to harvest present column values without extra API calls
-  try {
-    const cachedRecords = cache.get('all_records');
-    if (cachedRecords && Array.isArray(cachedRecords)) {
-      const fieldName = columnKey === 'agent' ? 'Name of Person' :
-                        columnKey === 'location' ? 'Location' :
-                        columnKey === 'source' ? 'Source' :
-                        columnKey === 'status' ? 'Status' : col.label;
-      cachedRecords.forEach(r => {
-        const val = r[fieldName];
-        if (val && typeof val === 'string' && val.trim()) {
-          values.push(val.trim());
-        }
-      });
-    }
-  } catch (err) {
-    console.warn(`[DropdownManager] Record scan failed for ${columnKey}:`, err.message);
+  // If Google Sheets has data validation set up for this column, return it!
+  if (values !== null) {
+    return [...new Set(values)].sort();
   }
 
-  // Final Fallback: Predefined defaults merged
+  // Fallback: Initial default list if Google Sheets has no data validation configured yet
   const defaultList = DEFAULT_FALLBACK_VALUES[columnKey] || [];
-  const merged = [...new Set([...values, ...defaultList])].sort();
-  return merged;
+  return [...new Set(defaultList)].sort();
 }
 
 // ── Internal: Write updated list back to the sheet ─────────────

@@ -337,7 +337,12 @@ const Reports = () => {
           
           <div className="flex items-center gap-3">
              <button 
-                onClick={fetchRecords}
+                onClick={async () => {
+                  try {
+                    await api.post('/cache/invalidate');
+                  } catch (e) {}
+                  fetchRecords();
+                }}
                 className="p-2 text-rose-200 hover:text-white hover:bg-rose-800 rounded-xl transition-all"
                 title="Refresh Data"
               >

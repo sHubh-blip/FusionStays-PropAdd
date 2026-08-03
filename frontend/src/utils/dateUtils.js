@@ -210,3 +210,19 @@ export const formatEODHeaderDate = (yyyyMmDd) => {
   return yyyyMmDd;
 };
 
+/**
+ * Format any date string to DD/MM/YY format (e.g. 30/07/26)
+ */
+export const formatToDDMMYY = (dateStr) => {
+  const normalized = normalizeDate(dateStr);
+  if (!normalized) return dateStr || '-';
+  const parts = normalized.split('-');
+  if (parts.length === 3) {
+    const [y, m, d] = parts;
+    const shortY = y.slice(-2);
+    return `${d}/${m}/${shortY}`;
+  }
+  return dateStr || '-';
+};
+
+

@@ -211,8 +211,7 @@ const Dashboard = () => {
 
       if ((newStatus || '').toLowerCase().trim() === 'live') {
         const todayStr = getTodayIST(); // YYYY-MM-DD
-        const [y, m, d] = todayStr.split('-');
-        apiPayload['Live Date'] = `${d}/${m}/${y}`;
+        apiPayload['Live Date'] = todayStr;
       }
 
       if (record._id) {
@@ -516,7 +515,15 @@ const Dashboard = () => {
                 </div>
 
                 <button
-                  onClick={() => refetch()}
+                  onClick={async () => {
+                    try {
+                      await api.post('/cache/invalidate');
+                    } catch (err) {
+                      console.error('Failed to invalidate cache:', err);
+                    }
+                    refetch();
+                    queryClient.invalidateQueries(['all_records_directory']);
+                  }}
                   className="p-2.5 text-slate-500 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm focus:outline-none flex-shrink-0"
                   title="Refresh"
                 >

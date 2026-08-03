@@ -1,6 +1,6 @@
 import React, { memo, useMemo } from 'react';
 import { MoreVertical, Edit2, MapPin, Lock } from 'lucide-react';
-import { getTodayIST, normalizeDate } from '../utils/dateUtils';
+import { getTodayIST, normalizeDate, formatToDDMMYY } from '../utils/dateUtils';
 
 const statusColors = {
   'Yet to Call': 'bg-[#fbe9e7] text-[#d84315] border-[#ffccbc]',
@@ -288,10 +288,10 @@ const RecordTable = ({
                 
                 <td className="py-1.5 px-4 text-[11px] text-slate-500 align-top">
                   <div className="flex flex-col">
-                    <span><span className="text-slate-400 text-xs">Added:</span> {record['Date of Entry'] || '-'}</span>
+                    <span><span className="text-slate-400 text-xs">Added:</span> {formatToDDMMYY(record['Date of Entry'])}</span>
                     <span className="flex items-center gap-1">
                       <span className="text-slate-400 text-xs">Live:</span> 
-                      <span className={isLiveToday ? 'font-bold text-emerald-700' : ''}>{record['Live Date'] || '-'}</span>
+                      <span className={isLiveToday ? 'font-bold text-emerald-700' : ''}>{formatToDDMMYY(record['Live Date'])}</span>
                       {isLiveToday && (
                         <span className="px-1 py-0.2 text-[9px] font-extrabold bg-emerald-100 text-emerald-800 rounded border border-emerald-300">
                           TODAY
