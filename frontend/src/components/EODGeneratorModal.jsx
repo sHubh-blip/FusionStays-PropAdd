@@ -131,40 +131,44 @@ const EODGeneratorModal = ({ onClose }) => {
     userRecords.forEach(r => {
       const entryDate = normalizeDate(r["Date of Entry"]);
       const liveDate = normalizeDate(r["Live Date"]);
+      const updatedDate = normalizeDate(r["Updated Date"]) || entryDate;
       const status = (r["Status"] || '').trim().toLowerCase();
 
       const isEntryToday = entryDate === currentEODDate;
       const isEntryMtd = Boolean(entryDate && entryDate.startsWith(currentMonthPrefix) && entryDate <= currentEODDate);
 
-      const isLiveToday = (liveDate === currentEODDate) || (isEntryToday && isLiveStatus(status));
-      const isLiveMtd = Boolean((liveDate && liveDate.startsWith(currentMonthPrefix) && liveDate <= currentEODDate) || (isEntryMtd && isLiveStatus(status)));
+      const isUpdatedToday = updatedDate === currentEODDate;
+      const isUpdatedMtd = Boolean(updatedDate && updatedDate.startsWith(currentMonthPrefix) && updatedDate <= currentEODDate);
+
+      const isLiveToday = (liveDate === currentEODDate) || (isEntryToday && isLiveStatus(status)) || (isUpdatedToday && isLiveStatus(status));
+      const isLiveMtd = Boolean((liveDate && liveDate.startsWith(currentMonthPrefix) && liveDate <= currentEODDate) || (isEntryMtd && isLiveStatus(status)) || (isUpdatedMtd && isLiveStatus(status)));
 
       // 1. Shortlisted: Total entries made by the user (Date of Entry)
       if (isEntryToday) shortlistedToday++;
       if (isEntryMtd) shortlistedMtd++;
 
-      // 2. Connected / Called: status = called, contacted, contact later, called but didn't answer, declined
+      // 2. Connected / Called: status = called, contacted, contact later, called but didn't answer, declined (uses Updated Date)
       if (isCalledStatus(status)) {
-        if (isEntryToday) calledToday++;
-        if (isEntryMtd) calledMtd++;
+        if (isUpdatedToday) calledToday++;
+        if (isUpdatedMtd) calledMtd++;
       }
 
-      // 3. Agreed to partner: status = follow up
+      // 3. Agreed to partner: status = follow up (uses Updated Date)
       if (isAgreedStatus(status)) {
-        if (isEntryToday) agreedToday++;
-        if (isEntryMtd) agreedMtd++;
+        if (isUpdatedToday) agreedToday++;
+        if (isUpdatedMtd) agreedMtd++;
       }
 
-      // 4. Shared all details: status = full details received
+      // 4. Shared all details: status = full details received (uses Updated Date)
       if (isSharedStatus(status)) {
-        if (isEntryToday) sharedToday++;
-        if (isEntryMtd) sharedMtd++;
+        if (isUpdatedToday) sharedToday++;
+        if (isUpdatedMtd) sharedMtd++;
       }
 
-      // 5. Uploaded: status = pending for qc
+      // 5. Uploaded: status = pending for qc (uses Updated Date)
       if (isUploadedStatus(status)) {
-        if (isEntryToday) uploadedToday++;
-        if (isEntryMtd) uploadedMtd++;
+        if (isUpdatedToday) uploadedToday++;
+        if (isUpdatedMtd) uploadedMtd++;
       }
 
       // 6. Live: status = live
@@ -177,37 +181,41 @@ const EODGeneratorModal = ({ onClose }) => {
     // Process Internal Leads
     userLeads.forEach(l => {
       const addedDate = normalizeDate(l["Date Added"]);
+      const updatedDate = normalizeDate(l["Updated Date"] || l["Last Updated"]) || addedDate;
       const status = (l["Status"] || '').trim().toLowerCase();
 
       const isAddedToday = addedDate === currentEODDate;
       const isAddedMtd = Boolean(addedDate && addedDate.startsWith(currentMonthPrefix) && addedDate <= currentEODDate);
 
+      const isUpdatedToday = updatedDate === currentEODDate;
+      const isUpdatedMtd = Boolean(updatedDate && updatedDate.startsWith(currentMonthPrefix) && updatedDate <= currentEODDate);
+
       if (isAddedToday) shortlistedToday++;
       if (isAddedMtd) shortlistedMtd++;
 
       if (isCalledStatus(status)) {
-        if (isAddedToday) calledToday++;
-        if (isAddedMtd) calledMtd++;
+        if (isUpdatedToday) calledToday++;
+        if (isUpdatedMtd) calledMtd++;
       }
 
       if (isAgreedStatus(status)) {
-        if (isAddedToday) agreedToday++;
-        if (isAddedMtd) agreedMtd++;
+        if (isUpdatedToday) agreedToday++;
+        if (isUpdatedMtd) agreedMtd++;
       }
 
       if (isSharedStatus(status)) {
-        if (isAddedToday) sharedToday++;
-        if (isAddedMtd) sharedMtd++;
+        if (isUpdatedToday) sharedToday++;
+        if (isUpdatedMtd) sharedMtd++;
       }
 
       if (isUploadedStatus(status)) {
-        if (isAddedToday) uploadedToday++;
-        if (isAddedMtd) uploadedMtd++;
+        if (isUpdatedToday) uploadedToday++;
+        if (isUpdatedMtd) uploadedMtd++;
       }
 
       if (isLiveStatus(status)) {
-        if (isAddedToday) liveToday++;
-        if (isAddedMtd) liveMtd++;
+        if (isUpdatedToday) liveToday++;
+        if (isUpdatedMtd) liveMtd++;
       }
     });
 

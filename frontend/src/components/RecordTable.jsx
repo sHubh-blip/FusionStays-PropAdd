@@ -298,6 +298,9 @@ const RecordTable = ({
                         </span>
                       )}
                     </span>
+                    {record['Updated Date'] && record['Updated Date'] !== '-' && (
+                      <span><span className="text-slate-400 text-xs">Updated:</span> {formatToDDMMYY(record['Updated Date'])}</span>
+                    )}
                   </div>
                 </td>
                 

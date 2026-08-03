@@ -207,7 +207,10 @@ const Dashboard = () => {
 
   const handleStatusChange = useCallback(async (record, newStatus) => {
     try {
-      const apiPayload = { Status: newStatus };
+      const apiPayload = { 
+        Status: newStatus,
+        'Updated Date': getTodayIST()
+      };
 
       if ((newStatus || '').toLowerCase().trim() === 'live') {
         const todayStr = getTodayIST(); // YYYY-MM-DD

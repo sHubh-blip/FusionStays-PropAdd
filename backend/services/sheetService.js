@@ -19,6 +19,7 @@ const mapRows = (rows, headers) => {
     "Reason to List": cleanStr(getVal(row, 'Reason to List')),
     "Status": cleanStr(getVal(row, 'Status')),
     "Live Date": cleanStr(getVal(row, 'Live Date')),
+    "Updated Date": cleanStr(getVal(row, 'Updated Date')),
     "Remarks": cleanStr(getVal(row, 'Remarks')),
     "Details": cleanStr(getVal(row, 'Details'))
   }))

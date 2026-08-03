@@ -19,8 +19,8 @@ const emptyForm = {
 
 const SOURCE_OPTIONS = ["Inbound", "Outbound", "Referral", "Internal Lead"];
 const STATUS_OPTIONS = [
-  "Yet to Call", "Called", "Declined", "Pending for QC", "Follow up", 
-  "Live", "Called but didn't answer", "QC Reject", "Not needed", 
+  "Yet to Call", "Called", "Declined", "Pending for QC", "Follow up",
+  "Live", "Called but didn't answer", "QC Reject", "Not needed",
   "Full Details Received", "In draft", "already live",
   "contact++", "contact later", "Contacted", "In Progress"
 ];
@@ -33,6 +33,7 @@ const InputWrapper = ({ label, error, children }) => (
   </div>
 );
 
+
 const SearchableSelect = ({ value, onChange, options, placeholder, allowCustom = true, name }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState(value || '');
@@ -41,7 +42,7 @@ const SearchableSelect = ({ value, onChange, options, placeholder, allowCustom =
     setSearch(value || '');
   }, [value]);
 
-  const filtered = options.filter(opt => 
+  const filtered = options.filter(opt =>
     opt.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -167,7 +168,7 @@ const RecordFormModal = ({ record, onClose, onSave, user, uniqueLocations = [], 
     }
     setIsAddingSource(true);
     try {
-      await api.post('/options/add', { type: 'source', value: val }).catch(() => {});
+      await api.post('/options/add', { type: 'source', value: val }).catch(() => { });
       if (!sourcesList.includes(val)) {
         setSourcesList(prev => [...prev, val].sort());
       }
@@ -213,8 +214,8 @@ const RecordFormModal = ({ record, onClose, onSave, user, uniqueLocations = [], 
     } else {
       let defaultPerson = '';
       if (user && user.email) {
-         const parts = user.email.split('@')[0];
-         defaultPerson = parts.charAt(0).toUpperCase() + parts.slice(1);
+        const parts = user.email.split('@')[0];
+        defaultPerson = parts.charAt(0).toUpperCase() + parts.slice(1);
       }
       setFormData({ ...emptyForm, "Date of Entry": getTodayIST(), "Name of Person": defaultPerson });
     }
@@ -226,7 +227,7 @@ const RecordFormModal = ({ record, onClose, onSave, user, uniqueLocations = [], 
     if (!formData['Name of property']) newErrors['Name of property'] = 'Required';
     if (!formData['Location']) newErrors['Location'] = 'Required';
     if (!formData['Date of Entry']) newErrors['Date of Entry'] = 'Required';
-    
+
     // Phone validation
     if (formData['Phone Number']) {
       const phoneRegex = /^[0-9]{10,15}$/;
@@ -242,7 +243,7 @@ const RecordFormModal = ({ record, onClose, onSave, user, uniqueLocations = [], 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
-    
+
     setIsSubmitting(true);
     const finalForm = { ...formData };
     const statusLower = (finalForm['Status'] || '').toLowerCase().trim();
@@ -274,13 +275,13 @@ const RecordFormModal = ({ record, onClose, onSave, user, uniqueLocations = [], 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col animate-slide-up overflow-hidden">
-        
+
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
           <h2 className="text-xl font-bold text-slate-800">
             {record ? 'Edit Record' : 'Add New Record'}
           </h2>
-          <button 
+          <button
             onClick={onClose}
             className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors focus:outline-none"
           >
@@ -291,19 +292,19 @@ const RecordFormModal = ({ record, onClose, onSave, user, uniqueLocations = [], 
         {/* Body */}
         <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
           <form id="recordForm" onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
+
             <InputWrapper label="Date of Entry" error={errors['Date of Entry']}>
-              <input type="date" name="Date of Entry" value={formData['Date of Entry']} onChange={handleChange} 
+              <input type="date" name="Date of Entry" value={formData['Date of Entry']} onChange={handleChange}
                 className={`w-full bg-slate-50 border ${errors['Date of Entry'] ? 'border-red-300 focus:ring-red-500' : 'border-slate-200 focus:ring-brand-500'} rounded-xl py-2.5 px-4 focus:outline-none focus:ring-2 focus:border-transparent transition-all`} />
             </InputWrapper>
 
             <InputWrapper label="Live Date" error={errors['Live Date']}>
-              <input type="date" name="Live Date" value={formData['Live Date']} onChange={handleChange} 
+              <input type="date" name="Live Date" value={formData['Live Date']} onChange={handleChange}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all" />
             </InputWrapper>
 
             <InputWrapper label="Name of Property" error={errors['Name of property']}>
-              <input type="text" name="Name of property" value={formData['Name of property']} onChange={handleChange} 
+              <input type="text" name="Name of property" value={formData['Name of property']} onChange={handleChange}
                 className={`w-full bg-slate-50 border ${errors['Name of property'] ? 'border-red-300 focus:ring-red-500' : 'border-slate-200 focus:ring-brand-500'} rounded-xl py-2.5 px-4 focus:outline-none focus:ring-2 focus:border-transparent transition-all`} />
             </InputWrapper>
 
@@ -341,7 +342,7 @@ const RecordFormModal = ({ record, onClose, onSave, user, uniqueLocations = [], 
                 </div>
               )}
 
-              <SearchableSelect 
+              <SearchableSelect
                 name="Location"
                 value={formData['Location']}
                 onChange={handleChange}
@@ -353,17 +354,17 @@ const RecordFormModal = ({ record, onClose, onSave, user, uniqueLocations = [], 
             </div>
 
             <InputWrapper label="Person (Employee Name)" error={errors['Name of Person']}>
-               <SearchableSelect 
-                 name="Name of Person"
-                 value={formData['Name of Person']}
-                 onChange={handleChange}
-                 options={uniquePersons}
-                 allowCustom={false}
-               />
+              <SearchableSelect
+                name="Name of Person"
+                value={formData['Name of Person']}
+                onChange={handleChange}
+                options={uniquePersons}
+                allowCustom={false}
+              />
             </InputWrapper>
 
             <InputWrapper label="Phone Number" error={errors['Phone Number']}>
-              <input type="text" name="Phone Number" value={formData['Phone Number']} onChange={handleChange} placeholder="5551234567" 
+              <input type="text" name="Phone Number" value={formData['Phone Number']} onChange={handleChange} placeholder="5551234567"
                 className={`w-full bg-slate-50 border ${errors['Phone Number'] ? 'border-red-300 focus:ring-red-500' : 'border-slate-200 focus:ring-brand-500'} rounded-xl py-2.5 px-4 focus:outline-none focus:ring-2 focus:border-transparent transition-all`} />
             </InputWrapper>
 
@@ -401,7 +402,7 @@ const RecordFormModal = ({ record, onClose, onSave, user, uniqueLocations = [], 
                 </div>
               )}
 
-              <SearchableSelect 
+              <SearchableSelect
                 name="Source"
                 value={formData['Source']}
                 onChange={handleChange}
@@ -413,45 +414,45 @@ const RecordFormModal = ({ record, onClose, onSave, user, uniqueLocations = [], 
             </div>
 
             <InputWrapper label="Status" error={errors['Status']}>
-               {(() => {
-                 const isAdmin = (user?.role || '').toLowerCase() === 'admin';
-                 const recordStatusLower = (record?.['Status'] || '').trim().toLowerCase();
-                 const selectableStatusOptions = STATUS_OPTIONS.filter(opt => {
-                   if (isAdmin) return true;
-                   const optLower = opt.trim().toLowerCase();
-                   if (optLower === 'live' && recordStatusLower !== 'live') return false;
-                   return true;
-                 });
-                 return (
-                   <SearchableSelect 
-                     name="Status"
-                     value={formData['Status']}
-                     onChange={handleChange}
-                     options={selectableStatusOptions}
-                     allowCustom={false}
-                     placeholder="Select status..."
-                   />
-                 );
-               })()}
+              {(() => {
+                const isAdmin = (user?.role || '').toLowerCase() === 'admin';
+                const recordStatusLower = (record?.['Status'] || '').trim().toLowerCase();
+                const selectableStatusOptions = STATUS_OPTIONS.filter(opt => {
+                  if (isAdmin) return true;
+                  const optLower = opt.trim().toLowerCase();
+                  if (optLower === 'live' && recordStatusLower !== 'live') return false;
+                  return true;
+                });
+                return (
+                  <SearchableSelect
+                    name="Status"
+                    value={formData['Status']}
+                    onChange={handleChange}
+                    options={selectableStatusOptions}
+                    allowCustom={false}
+                    placeholder="Select status..."
+                  />
+                );
+              })()}
             </InputWrapper>
 
             <div className="md:col-span-2">
               <InputWrapper label="Reason to List" error={errors['Reason to List']}>
-                <input type="text" name="Reason to List" value={formData['Reason to List']} onChange={handleChange} placeholder="e.g. Needs better management" 
+                <input type="text" name="Reason to List" value={formData['Reason to List']} onChange={handleChange} placeholder="e.g. Needs better management"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all" />
               </InputWrapper>
             </div>
 
             <div className="md:col-span-2">
               <InputWrapper label="Remarks" error={errors['Remarks']}>
-                <textarea name="Remarks" value={formData['Remarks']} onChange={handleChange} rows={2} placeholder="Quick notes about interaction..." 
+                <textarea name="Remarks" value={formData['Remarks']} onChange={handleChange} rows={2} placeholder="Quick notes about interaction..."
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all resize-none" />
               </InputWrapper>
             </div>
 
             <div className="md:col-span-2">
               <InputWrapper label="Comprehensive Details" error={errors['Details']}>
-                <textarea name="Details" value={formData['Details']} onChange={handleChange} rows={3} placeholder="Full property specs, amenities, context..." 
+                <textarea name="Details" value={formData['Details']} onChange={handleChange} rows={3} placeholder="Full property specs, amenities, context..."
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all resize-none" />
               </InputWrapper>
             </div>
@@ -461,15 +462,15 @@ const RecordFormModal = ({ record, onClose, onSave, user, uniqueLocations = [], 
 
         {/* Footer */}
         <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-end items-center gap-3">
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={onClose}
             className="px-5 py-2.5 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm focus:outline-none"
           >
             Cancel
           </button>
-          
-          <button 
+
+          <button
             form="recordForm"
             type="submit"
             disabled={isSubmitting}

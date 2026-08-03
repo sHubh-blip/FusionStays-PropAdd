@@ -44,6 +44,12 @@ const normalizeDateStr = (dStr) => {
     if (p1.length === 4) return `${p1}-${p2.padStart(2, '0')}-${p3.padStart(2, '0')}`;
     let d = p1, m = p2, y = p3;
     if (y.length === 2) y = '20' + y;
+    let mNum = parseInt(m, 10);
+    let dNum = parseInt(d, 10);
+    if (mNum > 12 && dNum <= 12) {
+      // Swapped case: p1 was month, p2 was day
+      return `${y}-${d.padStart(2, '0')}-${m.padStart(2, '0')}`;
+    }
     return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
   }
   return dStr;
@@ -245,6 +251,7 @@ router.post('/records', requireAuth, async (req, res) => {
       "Reason to List": req.body['Reason to List'] || '',
       "Status": req.body['Status'] || '',
       "Live Date": liveDate,
+      "Updated Date": normalizeDateStr(req.body['Updated Date']) || getTodayISTFormatted(),
       "Remarks": req.body['Remarks'] || '',
       "Details": req.body['Details'] || ''
     };
@@ -290,6 +297,14 @@ router.put('/records/:id', requireAuth, async (req, res) => {
     }
     if (req.body['Live Date'] !== undefined) {
       req.body['Live Date'] = normalizeDateStr(req.body['Live Date']);
+    }
+    if (req.body['Updated Date'] !== undefined) {
+      req.body['Updated Date'] = normalizeDateStr(req.body['Updated Date']);
+    }
+
+    // Every time status is updated, set Updated Date to current date
+    if (req.body['Status'] !== undefined) {
+      req.body['Updated Date'] = getTodayISTFormatted();
     }
 
     // Every time status is updated to live or already live, set Live Date to present date
@@ -369,7 +384,7 @@ router.put('/records/:id', requireAuth, async (req, res) => {
     const updatableFields = [
       "Date of Entry", "Name of Person", "Name of property", "Location",
       "Phone Number", "Source", "Reason to List", "Status", "Live Date",
-      "Remarks", "Details"
+      "Remarks", "Details", "Updated Date"
     ];
 
     updatableFields.forEach(field => {
