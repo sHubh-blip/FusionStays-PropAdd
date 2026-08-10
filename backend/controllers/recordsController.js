@@ -142,24 +142,22 @@ router.get('/records', requireAuth, async (req, res) => {
       const sundayStr = `${sunY}-${sunM}-${sunD}`;
 
       filteredRecords = filteredRecords.filter(r => {
+        const normUpdated = normalizeDateStr(r["Updated Date"]);
         const normEntry = normalizeDateStr(r["Date of Entry"]);
-        const normLive = normalizeDateStr(r["Live Date"]);
+        const targetDate = normUpdated || normEntry;
         
-        const checkMatch = (norm) => {
-          if (!norm) return false;
-          if (startDate || endDate) {
-            if (startDate && endDate) return norm >= startDate && norm <= endDate;
-            if (startDate) return norm >= startDate;
-            if (endDate) return norm <= endDate;
-          }
-          if (dateFilter === 'today') return norm === todayIST;
-          if (dateFilter === 'week') return norm >= mondayStr && norm <= sundayStr;
-          if (dateFilter === 'month') return norm.startsWith(`${curY}-${curMStr}`);
-          if (dateFilter === 'year') return norm.startsWith(curY);
-          return true;
-        };
+        if (!targetDate) return false;
 
-        return checkMatch(normEntry) || checkMatch(normLive);
+        if (startDate || endDate) {
+          if (startDate && endDate) return targetDate >= startDate && targetDate <= endDate;
+          if (startDate) return targetDate >= startDate;
+          if (endDate) return targetDate <= endDate;
+        }
+        if (dateFilter === 'today') return targetDate === todayIST;
+        if (dateFilter === 'week') return targetDate >= mondayStr && targetDate <= sundayStr;
+        if (dateFilter === 'month') return targetDate.startsWith(`${curY}-${curMStr}`);
+        if (dateFilter === 'year') return targetDate.startsWith(curY);
+        return true;
       });
     }
 
