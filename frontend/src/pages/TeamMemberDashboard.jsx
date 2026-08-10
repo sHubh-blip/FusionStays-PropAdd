@@ -1,9 +1,11 @@
 // frontend/src/pages/TeamMemberDashboard.jsx
 import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { AuthContext } from '../context/AuthContext';
-import { LogOut, Plus, LayoutDashboard, Sparkles, CheckCircle2, Shield } from 'lucide-react';
+import { LogOut, Plus, LayoutDashboard, Sparkles, CheckCircle2, Shield, Bell } from 'lucide-react';
 import LeadUploadModal from '../components/LeadUploadModal';
+import NotificationPanel from '../components/NotificationPanel';
 import api from '../api';
 
 export default function TeamMemberDashboard() {
@@ -61,6 +63,38 @@ export default function TeamMemberDashboard() {
     fetchDropdownOptions();
   }, []);
 
+  // Notification State
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [readNotificationIds, setReadNotificationIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`read_notifications_${user?.email || 'guest'}`);
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch (e) {
+      return new Set();
+    }
+  });
+
+  const { data: notificationsData } = useQuery({
+    queryKey: ['user_notifications_team', user?.email],
+    queryFn: async () => {
+      const res = await api.get('/notifications');
+      return res.data;
+    },
+    enabled: Boolean(user),
+    refetchInterval: 30000,
+  });
+
+  const allNotifications = notificationsData?.allNotifications || [];
+  const unreadNotificationCount = allNotifications.filter(n => !readNotificationIds.has(n.id)).length;
+
+  const handleMarkAllRead = () => {
+    const allIds = new Set(allNotifications.map(n => n.id));
+    setReadNotificationIds(allIds);
+    try {
+      localStorage.setItem(`read_notifications_${user?.email || 'guest'}`, JSON.stringify(Array.from(allIds)));
+    } catch (e) {}
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans relative overflow-hidden">
       {/* Dynamic Ambient Background Glows */}
@@ -86,6 +120,18 @@ export default function TeamMemberDashboard() {
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Active Session
             </span>
           </div>
+          <button
+            onClick={() => setIsNotificationOpen(true)}
+            className="relative p-2.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl transition-colors border border-slate-800"
+            title="Notifications"
+          >
+            <Bell className="w-4 h-4 text-amber-400" />
+            {unreadNotificationCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-amber-500 text-slate-950 font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center shadow-md animate-bounce">
+                {unreadNotificationCount}
+              </span>
+            )}
+          </button>
           <button
             onClick={logout}
             className="p-2.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-xl transition-colors border border-slate-800"
@@ -168,6 +214,14 @@ export default function TeamMemberDashboard() {
           uniqueLocations={uniqueLocations}
         />
       )}
+      {/* Notification Slide-over Panel */}
+      <NotificationPanel
+        isOpen={isNotificationOpen}
+        onClose={() => setIsNotificationOpen(false)}
+        notificationsData={notificationsData}
+        readIds={readNotificationIds}
+        onMarkAllRead={handleMarkAllRead}
+      />
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { AuthContext } from '../context/AuthContext';
 import {
   LogOut, Plus, Search, Plane, Home, RefreshCw, Users, MapPin, Layers,
   Menu, X, ChevronDown, ChevronRight, BarChart, Calendar, TrendingUp,
-  ChevronLeft, MessageSquare, Globe, FileText
+  ChevronLeft, MessageSquare, Globe, FileText, Bell
 } from 'lucide-react';
 import api from '../api';
 import RecordTable from '../components/RecordTable';
@@ -13,6 +13,7 @@ import RecordFormModal from '../components/RecordFormModal';
 import SkeletonTable from '../components/SkeletonTable';
 import ChatPanel from '../components/ChatPanel';
 import EODGeneratorModal from '../components/EODGeneratorModal';
+import NotificationPanel from '../components/NotificationPanel';
 import { getTodayIST, normalizeDate } from '../utils/dateUtils';
 import TeamMemberDashboard from './TeamMemberDashboard';
 
@@ -56,6 +57,40 @@ const Dashboard = () => {
   // Chat State
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // Notification State
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [readNotificationIds, setReadNotificationIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`read_notifications_${user?.email || 'guest'}`);
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch (e) {
+      return new Set();
+    }
+  });
+
+  const { data: notificationsData, refetch: refetchNotifications } = useQuery({
+    queryKey: ['user_notifications', user?.email],
+    queryFn: async () => {
+      const res = await api.get('/notifications');
+      return res.data;
+    },
+    enabled: Boolean(user),
+    refetchInterval: 30000,
+  });
+
+  const allNotifications = notificationsData?.allNotifications || [];
+  const unreadNotificationCount = useMemo(() => {
+    return allNotifications.filter(n => !readNotificationIds.has(n.id)).length;
+  }, [allNotifications, readNotificationIds]);
+
+  const handleMarkAllRead = () => {
+    const allIds = new Set(allNotifications.map(n => n.id));
+    setReadNotificationIds(allIds);
+    try {
+      localStorage.setItem(`read_notifications_${user?.email || 'guest'}`, JSON.stringify(Array.from(allIds)));
+    } catch (e) {}
+  };
 
   // Fetch Logic (Task 5)
   const fetchRecords = async ({ page, limit, status, agent, location, search, dateFilter, startDate, endDate }) => {
@@ -325,6 +360,18 @@ const Dashboard = () => {
                   Online
                 </div>
               </div>
+              <button
+                onClick={() => setIsNotificationOpen(true)}
+                className="relative text-slate-300 hover:text-white hover:bg-slate-700 transition-all flex items-center p-2 rounded-lg"
+                title="Notifications"
+              >
+                <Bell className="w-5 h-5 text-amber-400" />
+                {unreadNotificationCount > 0 && (
+                  <span className="absolute top-0 right-0 bg-amber-500 text-slate-950 font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center shadow-md animate-bounce">
+                    {unreadNotificationCount}
+                  </span>
+                )}
+              </button>
               <button
                 onClick={() => setIsChatOpen(true)}
                 className="relative text-slate-300 hover:text-white hover:bg-slate-700 transition-all flex items-center p-2 rounded-lg"
@@ -736,6 +783,15 @@ const Dashboard = () => {
       {isEODModalOpen && (
         <EODGeneratorModal onClose={() => setIsEODModalOpen(false)} />
       )}
+
+      {/* Notification Slide-over Panel */}
+      <NotificationPanel
+        isOpen={isNotificationOpen}
+        onClose={() => setIsNotificationOpen(false)}
+        notificationsData={notificationsData}
+        readIds={readNotificationIds}
+        onMarkAllRead={handleMarkAllRead}
+      />
     </div>
   );
 };
