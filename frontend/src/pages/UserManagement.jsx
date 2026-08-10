@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { 
-  Users, Plus, Trash2, Shield, ShieldAlert, Ban, CheckCircle, 
+import {
+  Users, Plus, Trash2, Shield, ShieldAlert, Ban, CheckCircle,
   ArrowLeft, LogOut, Plane, Menu, X, KeyRound, Loader2, AlertCircle, Eye, EyeOff, Edit3, ChevronDown
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -39,8 +39,8 @@ const UserManagement = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
 
-  const generatedUsername = fullName.trim() 
-    ? `${fullName.trim().split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '')}@workspace.com` 
+  const generatedUsername = fullName.trim()
+    ? `${fullName.trim().split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '')}@fusionstays.com`
     : '';
 
   // Fetch Users
@@ -69,7 +69,7 @@ const UserManagement = () => {
       setFormError('Full Name and Password are required.');
       return;
     }
-    
+
     try {
       await api.post('/users', { fullName: fullName.trim(), password, role, status });
       setShowAddModal(false);
@@ -308,13 +308,12 @@ const UserManagement = () => {
                               value={item.role}
                               disabled={isSelf || isUserActionLoading}
                               onChange={(e) => handleRoleChange(item, e.target.value)}
-                              className={`appearance-none flex items-center gap-1.5 px-3 py-1 pr-7 rounded-full text-xs font-bold transition-all cursor-pointer border focus:outline-none focus:ring-2 focus:ring-[#6D8196] ${
-                                item.role === 'admin' 
-                                  ? 'bg-[#4A4A4A] text-white border-[#6D8196]' 
-                                  : item.role === 'team_member'
+                              className={`appearance-none flex items-center gap-1.5 px-3 py-1 pr-7 rounded-full text-xs font-bold transition-all cursor-pointer border focus:outline-none focus:ring-2 focus:ring-[#6D8196] ${item.role === 'admin'
+                                ? 'bg-[#4A4A4A] text-white border-[#6D8196]'
+                                : item.role === 'team_member'
                                   ? 'bg-[#CBCBCB] text-[#4A4A4A] border-[#6D8196]'
                                   : 'bg-[#6D8196] text-white border-[#CBCBCB]'
-                              } ${isSelf ? 'cursor-not-allowed opacity-80' : ''}`}
+                                } ${isSelf ? 'cursor-not-allowed opacity-80' : ''}`}
                             >
                               <option value="admin" className="bg-[#4A4A4A] text-white">Admin</option>
                               <option value="prop_add" className="bg-[#6D8196] text-white">Prop/Add</option>
@@ -327,11 +326,10 @@ const UserManagement = () => {
                           <button
                             onClick={() => handleToggleStatus(item)}
                             disabled={isSelf || isUserActionLoading}
-                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${
-                              item.status === 'active' 
-                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
-                                : 'bg-rose-100 text-rose-800 border border-rose-300'
-                            } ${isSelf ? 'cursor-not-allowed opacity-80' : 'hover:scale-105'}`}
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${item.status === 'active'
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                              : 'bg-rose-100 text-rose-800 border border-rose-300'
+                              } ${isSelf ? 'cursor-not-allowed opacity-80' : 'hover:scale-105'}`}
                           >
                             {item.status === 'active' ? <CheckCircle className="w-3 h-3 text-emerald-600" /> : <Ban className="w-3 h-3 text-rose-600" />}
                             <span className="capitalize">{item.status}</span>
@@ -361,9 +359,8 @@ const UserManagement = () => {
                             <button
                               onClick={() => handleDeleteUser(item.email)}
                               disabled={isSelf || isUserActionLoading}
-                              className={`p-2 text-[#6D8196] hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors ${
-                                isSelf ? 'opacity-30 cursor-not-allowed' : ''
-                              }`}
+                              className={`p-2 text-[#6D8196] hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors ${isSelf ? 'opacity-30 cursor-not-allowed' : ''
+                                }`}
                               title="Delete Account"
                             >
                               <Trash2 className="w-4.5 h-4.5" />

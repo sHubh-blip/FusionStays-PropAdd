@@ -86,9 +86,14 @@ router.get('/records', requireAuth, async (req, res) => {
     let filteredRecords = [...records];
 
     if (status) {
-      filteredRecords = filteredRecords.filter(r =>
-        (r["Status"] || "").toLowerCase() === status.toLowerCase()
-      );
+      const statusList = (Array.isArray(status) ? status : String(status).split(','))
+        .map(s => s.trim().toLowerCase())
+        .filter(Boolean);
+      if (statusList.length > 0) {
+        filteredRecords = filteredRecords.filter(r =>
+          statusList.includes((r["Status"] || "").trim().toLowerCase())
+        );
+      }
     }
     if (agent) {
       filteredRecords = filteredRecords.filter(r =>
@@ -159,23 +164,26 @@ router.get('/records', requireAuth, async (req, res) => {
     }
 
     // 2.5 Server-side sorting
-    if (status && status.toLowerCase() === 'live') {
-      filteredRecords.sort((a, b) => {
-        const dateA = a["Live Date"] || a["Date of Entry"] || "";
-        const dateB = b["Live Date"] || b["Date of Entry"] || "";
+    if (status) {
+      const statusList = (Array.isArray(status) ? status : String(status).split(',')).map(s => s.trim().toLowerCase());
+      if (statusList.length === 1 && statusList[0] === 'live') {
+        filteredRecords.sort((a, b) => {
+          const dateA = a["Live Date"] || a["Date of Entry"] || "";
+          const dateB = b["Live Date"] || b["Date of Entry"] || "";
 
-        const parseDate = (dStr) => {
-          if (!dStr || dStr === '-') return 0;
-          const parts = dStr.split(/[-/]/);
-          if (parts.length === 3) {
-            const y = parts[2].length === 2 ? '20' + parts[2] : parts[2];
-            return new Date(`${y}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`).getTime();
-          }
-          return 0;
-        };
+          const parseDate = (dStr) => {
+            if (!dStr || dStr === '-') return 0;
+            const parts = dStr.split(/[-/]/);
+            if (parts.length === 3) {
+              const y = parts[2].length === 2 ? '20' + parts[2] : parts[2];
+              return new Date(`${y}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`).getTime();
+            }
+            return 0;
+          };
 
-        return parseDate(dateB) - parseDate(dateA); // descending
-      });
+          return parseDate(dateB) - parseDate(dateA); // descending
+        });
+      }
     }
 
     // 3. Server-side pagination

@@ -168,7 +168,7 @@ const Reports = () => {
       const loc = r["Location"] || "Unknown Location";
 
       if (!report[member]) {
-        report[member] = { total: 0, lives: 0, locations: {}, lastActive: null };
+        report[member] = { total: 0, lives: 0, qcRejects: 0, locations: {}, lastActive: null };
       }
 
       report[member].total++;
@@ -179,6 +179,27 @@ const Reports = () => {
       if (!report[member].lastActive || r["Live Date"] > report[member].lastActive) {
         report[member].lastActive = r["Live Date"];
       }
+    });
+
+    // Process QC Rejects in period
+    const qcRecords = records.filter(r => {
+      const status = (r["Status"] || "").trim().toLowerCase();
+      if (status !== "qc reject") return false;
+
+      if (locationFilter && (r["Location"] || "").toLowerCase() !== locationFilter.toLowerCase()) {
+        return false;
+      }
+      return true;
+    });
+
+    const filteredQcRecords = qcRecords.filter(r => isLiveInCurrentPeriod(r["Updated Date"] || r["Date of Entry"]));
+
+    filteredQcRecords.forEach(r => {
+      const member = r["Name of Person"] || "Unassigned";
+      if (!report[member]) {
+        report[member] = { total: 0, lives: 0, qcRejects: 0, locations: {}, lastActive: null };
+      }
+      report[member].qcRejects++;
     });
 
     const previousActiveAgents = new Set(previousFiltered.map(r => r["Name of Person"] || "Unassigned")).size;
@@ -509,14 +530,15 @@ const Reports = () => {
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4">Top Locations</th>
                   <th className="px-6 py-4">Total Listings</th>
+                  <th className="px-6 py-4">QC Reject</th>
                   <th className="px-6 py-4 text-right">Performance</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {isLoading ? (
-                  <tr><td colSpan="5" className="py-20 text-center"><div className="animate-spin h-8 w-8 border-2 border-brand-600 border-t-transparent rounded-full mx-auto"></div></td></tr>
+                  <tr><td colSpan="6" className="py-20 text-center"><div className="animate-spin h-8 w-8 border-2 border-brand-600 border-t-transparent rounded-full mx-auto"></div></td></tr>
                 ) : filteredReportEntries.length === 0 ? (
-                  <tr><td colSpan="5" className="py-20 text-center text-slate-400 font-medium">No records found for this period</td></tr>
+                  <tr><td colSpan="6" className="py-20 text-center text-slate-400 font-medium">No records found for this period</td></tr>
                 ) : (
                   filteredReportEntries.map(([name, data]) => (
                     <tr key={name} className="hover:bg-slate-50/80 transition-colors group">
@@ -554,6 +576,12 @@ const Reports = () => {
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-2">
                            <span className="font-black text-slate-800 text-lg">{data.total}</span>
+                           <span className="text-[10px] text-slate-400 font-bold uppercase">units</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-2">
+                           <span className={`font-black text-lg ${data.qcRejects > 0 ? 'text-rose-600' : 'text-slate-800'}`}>{data.qcRejects || 0}</span>
                            <span className="text-[10px] text-slate-400 font-bold uppercase">units</span>
                         </div>
                       </td>

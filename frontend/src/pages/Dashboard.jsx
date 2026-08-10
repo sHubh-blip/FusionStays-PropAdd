@@ -29,7 +29,7 @@ const Dashboard = () => {
   const [search, setSearch] = useState('');
   const [personFilter, setPersonFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState([]);
   const [dateFilter, setDateFilter] = useState('all'); // all, today, week, month, year, custom
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -59,10 +59,11 @@ const Dashboard = () => {
 
   // Fetch Logic (Task 5)
   const fetchRecords = async ({ page, limit, status, agent, location, search, dateFilter, startDate, endDate }) => {
+    const statusParam = Array.isArray(status) ? status.join(',') : status;
     const params = new URLSearchParams({
       page,
       limit,
-      ...(status && { status }),
+      ...(statusParam && { status: statusParam }),
       ...(agent && { agent }),
       ...(location && { location }),
       ...(search && { search }),
@@ -74,8 +75,10 @@ const Dashboard = () => {
     return data;
   };
 
+  const statusKeyStr = Array.isArray(statusFilter) ? statusFilter.join(',') : statusFilter;
+
   const { data: recordsData, isLoading, isFetching, isError, error, refetch } = useQuery({
-    queryKey: ['records', page, statusFilter, personFilter, locationFilter, search, dateFilter, startDate, endDate],
+    queryKey: ['records', page, statusKeyStr, personFilter, locationFilter, search, dateFilter, startDate, endDate],
     queryFn: () => fetchRecords({
       page,
       limit,
@@ -105,6 +108,20 @@ const Dashboard = () => {
   const records = recordsData?.data || [];
   const allRecords = allRecordsData || [];
   const meta = recordsData?.meta || { total: 0, page: 1, totalPages: 1 };
+
+  const statusCounts = useMemo(() => {
+    const counts = {};
+    (allRecords || []).forEach(r => {
+      if (locationFilter && (r["Location"] || "").toLowerCase() !== locationFilter.toLowerCase()) return;
+      if (personFilter && (r["Name of Person"] || "").toLowerCase() !== personFilter.toLowerCase()) return;
+      const st = (r["Status"] || "").trim();
+      if (st) {
+        const key = st.toLowerCase();
+        counts[key] = (counts[key] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [allRecords, locationFilter, personFilter]);
 
   // Sync page back to 1 if filters change
   useEffect(() => {
@@ -470,12 +487,23 @@ const Dashboard = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
 
               <div className="flex flex-wrap gap-2 items-center flex-1">
-                {statusFilter && (
-                  <span className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 shadow-xs animate-fade-in">
-                    Status: {statusFilter}
-                    <button onClick={() => setStatusFilter('')} className="ml-1.5 hover:text-amber-900 focus:outline-none"><X className="w-3.5 h-3.5" /></button>
-                  </span>
-                )}
+                {(Array.isArray(statusFilter) ? statusFilter : (statusFilter ? statusFilter.split(',') : [])).map(st => {
+                  const count = statusCounts[st.trim().toLowerCase()] || 0;
+                  return (
+                    <span key={st} className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 shadow-xs animate-fade-in">
+                      Status: {st} - {count}
+                      <button
+                        onClick={() => {
+                          const cur = Array.isArray(statusFilter) ? statusFilter : (statusFilter ? statusFilter.split(',') : []);
+                          setStatusFilter(cur.filter(s => s !== st));
+                        }}
+                        className="ml-1.5 hover:text-amber-900 focus:outline-none"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </span>
+                  );
+                })}
                 {locationFilter && (
                   <span className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-xs animate-fade-in">
                     Location: {locationFilter}
@@ -488,7 +516,7 @@ const Dashboard = () => {
                     <button onClick={() => setPersonFilter('')} className="ml-1.5 hover:text-emerald-900 focus:outline-none"><X className="w-3.5 h-3.5" /></button>
                   </span>
                 )}
-                {!statusFilter && !locationFilter && !personFilter && (
+                {(Array.isArray(statusFilter) ? statusFilter.length === 0 : !statusFilter) && !locationFilter && !personFilter && (
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200">
                     All Database Properties
                   </span>
@@ -587,7 +615,7 @@ const Dashboard = () => {
                       setSearch('');
                       setLocationFilter('');
                       setPersonFilter('');
-                      setStatusFilter('');
+                      setStatusFilter([]);
                       setDateFilter('all');
                       setStartDate('');
                       setEndDate('');
@@ -612,6 +640,7 @@ const Dashboard = () => {
                       setLocationFilter={setLocationFilter}
                       statusFilter={statusFilter}
                       setStatusFilter={setStatusFilter}
+                      statusCounts={statusCounts}
                       personFilter={personFilter}
                       setPersonFilter={setPersonFilter}
                       dateFilter={dateFilter}

@@ -67,7 +67,7 @@ const EODGeneratorModal = ({ onClose }) => {
   // Compute metrics for selectedUser
   const eodReportData = useMemo(() => {
     if (!selectedUser) {
-      return { shortlisted: { today: 0, mtd: 0 }, called: { today: 0, mtd: 0 }, agreed: { today: 0, mtd: 0 }, shared: { today: 0, mtd: 0 }, uploaded: { today: 0, mtd: 0 }, live: { today: 0, mtd: 0 } };
+      return { shortlisted: { today: 0, mtd: 0 }, called: { today: 0, mtd: 0 }, agreed: { today: 0, mtd: 0 }, shared: { today: 0, mtd: 0 }, uploaded: { today: 0, mtd: 0 }, qcReject: { today: 0, mtd: 0 }, live: { today: 0, mtd: 0 } };
     }
 
     const selClean = selectedUser.trim().toLowerCase();
@@ -104,6 +104,7 @@ const EODGeneratorModal = ({ onClose }) => {
     let agreedToday = 0, agreedMtd = 0;
     let sharedToday = 0, sharedMtd = 0;
     let uploadedToday = 0, uploadedMtd = 0;
+    let qcRejectToday = 0, qcRejectMtd = 0;
     let liveToday = 0, liveMtd = 0;
 
     // Status checking helpers based strictly on user specification
@@ -121,6 +122,10 @@ const EODGeneratorModal = ({ onClose }) => {
 
     const isUploadedStatus = (st) => {
       return st === 'pending for qc' || st.includes('pending for qc') || st.includes('pending_qc');
+    };
+
+    const isQcRejectStatus = (st) => {
+      return st === 'qc reject' || st.includes('qc reject');
     };
 
     const isLiveStatus = (st) => {
@@ -171,6 +176,12 @@ const EODGeneratorModal = ({ onClose }) => {
         if (isUpdatedMtd) uploadedMtd++;
       }
 
+      // 5.5. QC Reject: status = qc reject (uses Updated Date)
+      if (isQcRejectStatus(status)) {
+        if (isUpdatedToday) qcRejectToday++;
+        if (isUpdatedMtd) qcRejectMtd++;
+      }
+
       // 6. Live: status = live
       if (isLiveStatus(status)) {
         if (isLiveToday) liveToday++;
@@ -213,6 +224,11 @@ const EODGeneratorModal = ({ onClose }) => {
         if (isUpdatedMtd) uploadedMtd++;
       }
 
+      if (isQcRejectStatus(status)) {
+        if (isUpdatedToday) qcRejectToday++;
+        if (isUpdatedMtd) qcRejectMtd++;
+      }
+
       if (isLiveStatus(status)) {
         if (isUpdatedToday) liveToday++;
         if (isUpdatedMtd) liveMtd++;
@@ -225,6 +241,7 @@ const EODGeneratorModal = ({ onClose }) => {
       agreed: { today: agreedToday, mtd: agreedMtd },
       shared: { today: sharedToday, mtd: sharedMtd },
       uploaded: { today: uploadedToday, mtd: uploadedMtd },
+      qcReject: { today: qcRejectToday, mtd: qcRejectMtd },
       live: { today: liveToday, mtd: liveMtd }
     };
   }, [selectedUser, usersList, records, leads, currentEODDate, currentMonthPrefix]);
@@ -240,6 +257,7 @@ const EODGeneratorModal = ({ onClose }) => {
       `count of properties who agreed to partner with us | ${eodReportData.agreed.today.toString().padStart(5)} | ${eodReportData.agreed.mtd.toString().padStart(5)}\n` +
       `count of properties who has shared all details with us | ${eodReportData.shared.today.toString().padStart(5)} | ${eodReportData.shared.mtd.toString().padStart(5)}\n` +
       `count of properties uploaded          | ${eodReportData.uploaded.today.toString().padStart(5)} | ${eodReportData.uploaded.mtd.toString().padStart(5)}\n` +
+      `count of properties under qc reject   | ${eodReportData.qcReject.today.toString().padStart(5)} | ${eodReportData.qcReject.mtd.toString().padStart(5)}\n` +
       `count of properties live              | ${eodReportData.live.today.toString().padStart(5)} | ${eodReportData.live.mtd.toString().padStart(5)}\n` +
       `-----------------------------------------------`;
 
@@ -344,6 +362,11 @@ const EODGeneratorModal = ({ onClose }) => {
                     <td className="py-2.5 px-4 text-center font-bold text-slate-900">{eodReportData.uploaded.mtd}</td>
                   </tr>
                   <tr className="hover:bg-slate-50 transition-colors bg-slate-50/50">
+                    <td className="py-2.5 px-4 border-r border-slate-200">count of properties under qc reject</td>
+                    <td className="py-2.5 px-4 text-center font-bold text-slate-900 border-r border-slate-200">{eodReportData.qcReject.today}</td>
+                    <td className="py-2.5 px-4 text-center font-bold text-slate-900">{eodReportData.qcReject.mtd}</td>
+                  </tr>
+                  <tr className="hover:bg-slate-50 transition-colors">
                     <td className="py-2.5 px-4 border-r border-slate-200">count of properties live</td>
                     <td className="py-2.5 px-4 text-center font-bold text-slate-900 border-r border-slate-200">{eodReportData.live.today}</td>
                     <td className="py-2.5 px-4 text-center font-bold text-slate-900">{eodReportData.live.mtd}</td>

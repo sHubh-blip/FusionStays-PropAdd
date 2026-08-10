@@ -1,5 +1,5 @@
-import React, { memo, useMemo } from 'react';
-import { MoreVertical, Edit2, MapPin, Lock } from 'lucide-react';
+import React, { memo, useMemo, useState, useRef, useEffect } from 'react';
+import { MoreVertical, Edit2, MapPin, Lock, ChevronDown, Check, X } from 'lucide-react';
 import { getTodayIST, normalizeDate, formatToDDMMYY } from '../utils/dateUtils';
 
 const statusColors = {
@@ -51,6 +51,7 @@ const RecordTable = ({
   setLocationFilter,
   statusFilter = '',
   setStatusFilter,
+  statusCounts = {},
   personFilter = '',
   setPersonFilter,
   uniqueLocations = [],
@@ -63,6 +64,53 @@ const RecordTable = ({
 }) => {
   const userRole = (user?.role || '').toLowerCase();
   const isPropAddUser = ['prop_add', 'prop/add', 'pa', 'property_adder'].includes(userRole);
+
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const statusDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target)) {
+        setIsStatusDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectedStatuses = useMemo(() => {
+    if (!statusFilter) return [];
+    if (Array.isArray(statusFilter)) return statusFilter.filter(Boolean);
+    if (typeof statusFilter === 'string') {
+      return statusFilter.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    return [];
+  }, [statusFilter]);
+
+  const handleStatusToggle = (statusVal) => {
+    if (!setStatusFilter) return;
+    let updated;
+    if (selectedStatuses.includes(statusVal)) {
+      updated = selectedStatuses.filter(s => s !== statusVal);
+    } else {
+      updated = [...selectedStatuses, statusVal];
+    }
+    setStatusFilter(updated);
+  };
+
+  const handleClearStatusFilter = () => {
+    if (!setStatusFilter) return;
+    setStatusFilter(Array.isArray(statusFilter) ? [] : '');
+  };
+
+  const handleSelectAllStatuses = () => {
+    if (!setStatusFilter) return;
+    if (selectedStatuses.length === allStatuses.length) {
+      setStatusFilter(Array.isArray(statusFilter) ? [] : '');
+    } else {
+      setStatusFilter(Array.isArray(statusFilter) ? [...allStatuses] : allStatuses.join(','));
+    }
+  };
 
   const isAssignee = (assignedPersonVal) => {
     if (!assignedPersonVal) return false;
@@ -138,16 +186,78 @@ const RecordTable = ({
               <div className="flex items-center justify-between">
                 <span>Status</span>
                 {setStatusFilter && (
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="bg-slate-100 hover:bg-white text-slate-800 text-[10px] font-semibold border border-slate-300 rounded px-1 py-0.5 focus:outline-none cursor-pointer"
-                  >
-                    <option value="">All</option>
-                    {allStatuses.map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
+                  <div className="relative inline-block text-left" ref={statusDropdownRef}>
+                    <button
+                      type="button"
+                      onClick={() => setIsStatusDropdownOpen(prev => !prev)}
+                      className={`inline-flex items-center gap-1 text-[10px] font-semibold rounded px-1.5 py-0.5 border focus:outline-none cursor-pointer transition-all shadow-xs ${
+                        selectedStatuses.length > 0
+                          ? 'bg-amber-100 text-amber-900 border-amber-300 font-bold'
+                          : 'bg-slate-100 hover:bg-white text-slate-800 border-slate-300'
+                      }`}
+                    >
+                      <span className="truncate max-w-[85px] normal-case">
+                        {selectedStatuses.length === 0
+                          ? 'All'
+                          : selectedStatuses.length === 1
+                          ? selectedStatuses[0]
+                          : `${selectedStatuses.length} Selected`}
+                      </span>
+                      <ChevronDown className={`w-3 h-3 transition-transform duration-150 ${isStatusDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {isStatusDropdownOpen && (
+                      <div className="absolute right-0 mt-1 w-56 bg-white rounded-lg shadow-xl border border-slate-200 py-1.5 z-50 text-left normal-case text-xs font-normal">
+                        <div className="px-3 py-1.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/90">
+                          <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                            Filter Status {selectedStatuses.length > 0 && `(${selectedStatuses.length})`}
+                          </span>
+                          {selectedStatuses.length > 0 ? (
+                            <button
+                              type="button"
+                              onClick={handleClearStatusFilter}
+                              className="text-[10px] text-rose-600 hover:text-rose-800 font-bold focus:outline-none"
+                            >
+                              Clear
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={handleSelectAllStatuses}
+                              className="text-[10px] text-brand-600 hover:text-brand-800 font-bold focus:outline-none"
+                            >
+                              Select All
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="max-h-56 overflow-y-auto py-1">
+                          {allStatuses.map(s => {
+                            const isChecked = selectedStatuses.includes(s);
+                            return (
+                              <label
+                                key={s}
+                                className={`flex items-center px-3 py-1.5 hover:bg-slate-50 cursor-pointer text-xs transition-colors ${
+                                  isChecked ? 'bg-amber-50/70 font-semibold text-amber-900' : 'text-slate-700'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => handleStatusToggle(s)}
+                                  className="w-3.5 h-3.5 text-amber-600 border-slate-300 rounded focus:ring-amber-500 mr-2 cursor-pointer"
+                                />
+                                <span className="truncate flex-1">{s}</span>
+                                <span className="text-[10px] text-slate-400 font-medium ml-2 font-mono">
+                                  ({statusCounts[s.toLowerCase()] || 0})
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </th>
