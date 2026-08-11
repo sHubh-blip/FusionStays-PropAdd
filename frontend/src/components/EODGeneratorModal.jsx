@@ -64,7 +64,10 @@ const EODGeneratorModal = ({ onClose }) => {
     return merged;
   }, [usersList, records, leads]);
 
-  // Compute metrics for selectedUser
+  // Check if current logged in user is admin
+  const isAdmin = (user?.role || '').toLowerCase() === 'admin';
+
+  // Compute metrics for selectedUser (Standard Non-Admin EOD)
   const eodReportData = useMemo(() => {
     if (!selectedUser) {
       return { shortlisted: { today: 0, mtd: 0 }, called: { today: 0, mtd: 0 }, agreed: { today: 0, mtd: 0 }, shared: { today: 0, mtd: 0 }, uploaded: { today: 0, mtd: 0 }, qcReject: { today: 0, mtd: 0 }, live: { today: 0, mtd: 0 } };
@@ -246,20 +249,93 @@ const EODGeneratorModal = ({ onClose }) => {
     };
   }, [selectedUser, usersList, records, leads, currentEODDate, currentMonthPrefix]);
 
+  // Compute Admin EOD Items (Properties status changed to Live or QC Reject on current EOD date)
+  const adminEODItems = useMemo(() => {
+    if (!isAdmin) return [];
+
+    const items = [];
+
+    // Helper to test if status is live or qc reject
+    const isLive = (st) => st === 'live' || st === 'already live';
+    const isQcReject = (st) => st === 'qc reject' || st.includes('qc reject');
+
+    // Records
+    records.forEach(r => {
+      const rawStatus = (r["Status"] || '').trim();
+      const statusLower = rawStatus.toLowerCase();
+
+      if (!isLive(statusLower) && !isQcReject(statusLower)) return;
+
+      const liveDate = normalizeDate(r["Live Date"]);
+      const updatedDate = normalizeDate(r["Updated Date"]) || normalizeDate(r["Date of Entry"]);
+
+      const isChangedToday = (isLive(statusLower) && liveDate === currentEODDate) || (updatedDate === currentEODDate);
+
+      if (isChangedToday) {
+        items.push({
+          id: r._id || r["Name of property"],
+          propertyName: r["Name of property"] || r["Property Name"] || 'N/A',
+          assignedTo: r["Name of Person"] || 'Unassigned',
+          status: isLive(statusLower) ? 'Live' : 'QC Reject'
+        });
+      }
+    });
+
+    // Leads
+    leads.forEach(l => {
+      const rawStatus = (l["Status"] || '').trim();
+      const statusLower = rawStatus.toLowerCase();
+
+      if (!isLive(statusLower) && !isQcReject(statusLower)) return;
+
+      const updatedDate = normalizeDate(l["Updated Date"] || l["Last Updated"]) || normalizeDate(l["Date Added"]);
+      const isChangedToday = updatedDate === currentEODDate;
+
+      if (isChangedToday) {
+        items.push({
+          id: l._id || l["Name of Property"],
+          propertyName: l["Name of Property"] || l["Name of property"] || 'N/A',
+          assignedTo: l["Assigned To"] || 'Unassigned',
+          status: isLive(statusLower) ? 'Live' : 'QC Reject'
+        });
+      }
+    });
+
+    return items;
+  }, [isAdmin, records, leads, currentEODDate]);
+
   // Copy EOD report as text/formatted spreadsheet
   const handleCopyReport = () => {
-    const textReport = `EOD REPORT ${headerDateStr} (${selectedUser})\n` +
-      `-----------------------------------------------\n` +
-      `METRIC                               | TODAY | MTD\n` +
-      `-----------------------------------------------\n` +
-      `count of properties shortlisted       | ${eodReportData.shortlisted.today.toString().padStart(5)} | ${eodReportData.shortlisted.mtd.toString().padStart(5)}\n` +
-      `count of properties connected/called  | ${eodReportData.called.today.toString().padStart(5)} | ${eodReportData.called.mtd.toString().padStart(5)}\n` +
-      `count of properties who agreed to partner with us | ${eodReportData.agreed.today.toString().padStart(5)} | ${eodReportData.agreed.mtd.toString().padStart(5)}\n` +
-      `count of properties who has shared all details with us | ${eodReportData.shared.today.toString().padStart(5)} | ${eodReportData.shared.mtd.toString().padStart(5)}\n` +
-      `count of properties uploaded          | ${eodReportData.uploaded.today.toString().padStart(5)} | ${eodReportData.uploaded.mtd.toString().padStart(5)}\n` +
-      `count of properties under qc reject   | ${eodReportData.qcReject.today.toString().padStart(5)} | ${eodReportData.qcReject.mtd.toString().padStart(5)}\n` +
-      `count of properties live              | ${eodReportData.live.today.toString().padStart(5)} | ${eodReportData.live.mtd.toString().padStart(5)}\n` +
-      `-----------------------------------------------`;
+    let textReport = '';
+
+    if (isAdmin) {
+      textReport = `ADMIN EOD REPORT ${headerDateStr}\n` +
+        `--------------------------------------------------------------------------------\n` +
+        `PROPERTY NAME                       | ASSIGNED TO          | STATUS\n` +
+        `--------------------------------------------------------------------------------\n`;
+
+      if (adminEODItems.length === 0) {
+        textReport += `No property status changed to Live or QC Reject today.\n`;
+      } else {
+        adminEODItems.forEach(item => {
+          textReport += `${item.propertyName.padEnd(35)} | ${item.assignedTo.padEnd(20)} | ${item.status}\n`;
+        });
+      }
+      textReport += `--------------------------------------------------------------------------------`;
+    } else {
+      textReport = `EOD REPORT ${headerDateStr} (${selectedUser})\n` +
+        `-----------------------------------------------\n` +
+        `METRIC                               | TODAY | MTD\n` +
+        `-----------------------------------------------\n` +
+        `count of properties shortlisted       | ${eodReportData.shortlisted.today.toString().padStart(5)} | ${eodReportData.shortlisted.mtd.toString().padStart(5)}\n` +
+        `count of properties connected/called  | ${eodReportData.called.today.toString().padStart(5)} | ${eodReportData.called.mtd.toString().padStart(5)}\n` +
+        `count of properties who agreed to partner with us | ${eodReportData.agreed.today.toString().padStart(5)} | ${eodReportData.agreed.mtd.toString().padStart(5)}\n` +
+        `count of properties who has shared all details with us | ${eodReportData.shared.today.toString().padStart(5)} | ${eodReportData.shared.mtd.toString().padStart(5)}\n` +
+        `count of properties uploaded          | ${eodReportData.uploaded.today.toString().padStart(5)} | ${eodReportData.uploaded.mtd.toString().padStart(5)}\n` +
+        `count of properties under qc reject   | ${eodReportData.qcReject.today.toString().padStart(5)} | ${eodReportData.qcReject.mtd.toString().padStart(5)}\n` +
+        `count of properties live              | ${eodReportData.live.today.toString().padStart(5)} | ${eodReportData.live.mtd.toString().padStart(5)}\n` +
+        `-----------------------------------------------`;
+    }
 
     navigator.clipboard.writeText(textReport);
     setCopied(true);
@@ -277,7 +353,9 @@ const EODGeneratorModal = ({ onClose }) => {
               <FileText className="w-4.5 h-4.5" />
             </div>
             <div>
-              <h3 className="font-bold text-base tracking-tight text-white">EOD Report Generator</h3>
+              <h3 className="font-bold text-base tracking-tight text-white">
+                {isAdmin ? 'Admin EOD Report Generator' : 'EOD Report Generator'}
+              </h3>
               <p className="text-[11px] text-slate-400 font-medium">Daily work summary (Resets daily at 6:00 AM IST)</p>
             </div>
           </div>
@@ -289,21 +367,28 @@ const EODGeneratorModal = ({ onClose }) => {
         {/* Content */}
         <div className="p-6 space-y-6">
           
-          {/* Controls: Employee Selection & Reset Notice */}
+          {/* Controls: Employee Selection (for Non-Admin) & Reset Notice */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <User className="w-4 h-4 text-slate-500 flex-shrink-0" />
-              <label className="text-xs font-bold text-slate-600 uppercase tracking-wider flex-shrink-0">Employee:</label>
-              <select
-                value={selectedUser}
-                onChange={(e) => setSelectedUser(e.target.value)}
-                className="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all flex-1"
-              >
-                {personOptions.map(name => (
-                  <option key={name} value={name}>{name}</option>
-                ))}
-              </select>
-            </div>
+            {isAdmin ? (
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                <User className="w-4 h-4 text-emerald-600" />
+                <span>Admin View (Status updates to Live / QC Reject)</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <User className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                <label className="text-xs font-bold text-slate-600 uppercase tracking-wider flex-shrink-0">Employee:</label>
+                <select
+                  value={selectedUser}
+                  onChange={(e) => setSelectedUser(e.target.value)}
+                  className="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all flex-1"
+                >
+                  {personOptions.map(name => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl">
               <Calendar className="w-3.5 h-3.5 text-emerald-600" />
@@ -316,8 +401,54 @@ const EODGeneratorModal = ({ onClose }) => {
               <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
               <p className="text-xs font-semibold">Generating EOD report metrics...</p>
             </div>
+          ) : isAdmin ? (
+            /* Admin 3-Column Table */
+            <div className="border border-slate-300 rounded-xl overflow-hidden shadow-sm max-h-[380px] overflow-y-auto">
+              
+              {/* Green Title Header */}
+              <div className="bg-[#4d9346] text-white font-extrabold px-4 py-2 text-sm tracking-wide border-b border-slate-400 flex justify-between items-center sticky top-0 z-10">
+                <span>ADMIN EOD REPORT {headerDateStr}</span>
+                <span className="text-xs font-normal text-emerald-100">Total Updated: {adminEODItems.length}</span>
+              </div>
+
+              {/* Grid Table */}
+              <table className="w-full text-left border-collapse bg-white text-xs">
+                <thead className="sticky top-[37px] z-10">
+                  <tr className="bg-[#5b9bd5] text-white font-bold uppercase border-b border-slate-300">
+                    <th className="py-2.5 px-4 w-[45%] border-r border-slate-300">NAME OF PROPERTY</th>
+                    <th className="py-2.5 px-4 w-[35%] border-r border-slate-300">NAME</th>
+                    <th className="py-2.5 px-4 w-[20%] text-center">STATUS</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 text-slate-800 font-medium">
+                  {adminEODItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="py-8 text-center text-slate-400 font-semibold">
+                        No properties changed to Live or QC Reject today.
+                      </td>
+                    </tr>
+                  ) : (
+                    adminEODItems.map((item, idx) => (
+                      <tr key={idx} className={`hover:bg-slate-50 transition-colors ${idx % 2 === 1 ? 'bg-slate-50/50' : ''}`}>
+                        <td className="py-2.5 px-4 border-r border-slate-200 font-semibold text-slate-900">{item.propertyName}</td>
+                        <td className="py-2.5 px-4 border-r border-slate-200 text-slate-700">{item.assignedTo}</td>
+                        <td className="py-2.5 px-4 text-center font-bold">
+                          <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] ${
+                            item.status === 'Live'
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                              : 'bg-rose-100 text-rose-800 border border-rose-300'
+                          }`}>
+                            {item.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           ) : (
-            /* Excel-Style Table Representation */
+            /* Excel-Style Table Representation for Standard Users */
             <div className="border border-slate-300 rounded-xl overflow-hidden shadow-sm">
               
               {/* Green Title Header */}
