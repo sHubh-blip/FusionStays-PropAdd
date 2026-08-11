@@ -11,7 +11,8 @@ const NotificationPanel = ({ isOpen, onClose, notificationsData, onMarkAllRead, 
 
   if (!isOpen) return null;
 
-  const summary = notificationsData?.summary || { totalAssignedLeads: 0, liveCount: 0, qcRejectCount: 0 };
+  const isAdmin = notificationsData?.isAdmin;
+  const summary = notificationsData?.summary || {};
   const leadList = notificationsData?.leadNotifications || [];
   const propList = notificationsData?.propertyNotifications || [];
   const allList = notificationsData?.allNotifications || [];
@@ -21,8 +22,6 @@ const NotificationPanel = ({ isOpen, onClose, notificationsData, onMarkAllRead, 
     : activeTab === 'status'
     ? propList
     : allList;
-
-  const unreadDisplayList = displayList.filter(n => !readIds.has(n.id));
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/50 backdrop-blur-xs transition-opacity animate-fade-in flex justify-end">
@@ -36,7 +35,9 @@ const NotificationPanel = ({ isOpen, onClose, notificationsData, onMarkAllRead, 
             </div>
             <div>
               <h2 className="font-bold text-base tracking-tight text-white">Notifications</h2>
-              <p className="text-[11px] text-slate-300">Your assigned leads & property status changes</p>
+              <p className="text-[11px] text-slate-300">
+                {isAdmin ? 'Pending QC properties & unassigned leads' : 'Your assigned leads & property status changes'}
+              </p>
             </div>
           </div>
           <button
@@ -49,21 +50,37 @@ const NotificationPanel = ({ isOpen, onClose, notificationsData, onMarkAllRead, 
 
         {/* Summary Card */}
         <div className="p-4 bg-gradient-to-br from-slate-50 to-slate-100/70 border-b border-slate-200/70">
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Activity Overview</div>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs text-center">
-              <div className="text-lg font-black text-amber-600">{summary.totalAssignedLeads || 0}</div>
-              <div className="text-[10px] font-semibold text-slate-500">Leads Assigned</div>
-            </div>
-            <div className="bg-white p-3 rounded-xl border border-emerald-200/80 shadow-2xs text-center">
-              <div className="text-lg font-black text-emerald-600">{summary.liveCount || 0}</div>
-              <div className="text-[10px] font-semibold text-emerald-700">Made Live</div>
-            </div>
-            <div className="bg-white p-3 rounded-xl border border-rose-200/80 shadow-2xs text-center">
-              <div className="text-lg font-black text-rose-600">{summary.qcRejectCount || 0}</div>
-              <div className="text-[10px] font-semibold text-rose-700">QC Rejected</div>
-            </div>
+          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+            {isAdmin ? 'Admin Action Overview' : 'Activity Overview'}
           </div>
+
+          {isAdmin ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white p-3 rounded-xl border border-amber-200/80 shadow-2xs text-center">
+                <div className="text-xl font-black text-amber-600">{summary.pendingQcCount || 0}</div>
+                <div className="text-[11px] font-bold text-amber-800">Pending for QC</div>
+              </div>
+              <div className="bg-white p-3 rounded-xl border border-rose-200/80 shadow-2xs text-center">
+                <div className="text-xl font-black text-rose-600">{summary.unassignedLeadsCount || 0}</div>
+                <div className="text-[11px] font-bold text-rose-800">Unassigned Leads</div>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs text-center">
+                <div className="text-lg font-black text-amber-600">{summary.totalAssignedLeads || 0}</div>
+                <div className="text-[10px] font-semibold text-slate-500">Leads Assigned</div>
+              </div>
+              <div className="bg-white p-3 rounded-xl border border-emerald-200/80 shadow-2xs text-center">
+                <div className="text-lg font-black text-emerald-600">{summary.liveCount || 0}</div>
+                <div className="text-[10px] font-semibold text-emerald-700">Made Live</div>
+              </div>
+              <div className="bg-white p-3 rounded-xl border border-rose-200/80 shadow-2xs text-center">
+                <div className="text-lg font-black text-rose-600">{summary.qcRejectCount || 0}</div>
+                <div className="text-[10px] font-semibold text-rose-700">QC Rejected</div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Navigation Tabs */}
@@ -83,7 +100,7 @@ const NotificationPanel = ({ isOpen, onClose, notificationsData, onMarkAllRead, 
                 activeTab === 'leads' ? 'bg-amber-50 text-amber-700' : 'text-slate-500 hover:bg-slate-50'
               }`}
             >
-              Leads ({leadList.length})
+              {isAdmin ? 'Unassigned Leads' : 'Leads'} ({leadList.length})
             </button>
             <button
               onClick={() => setActiveTab('status')}
@@ -91,7 +108,7 @@ const NotificationPanel = ({ isOpen, onClose, notificationsData, onMarkAllRead, 
                 activeTab === 'status' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50'
               }`}
             >
-              Status Updates ({propList.length})
+              {isAdmin ? 'Pending QC' : 'Status Updates'} ({propList.length})
             </button>
           </div>
 

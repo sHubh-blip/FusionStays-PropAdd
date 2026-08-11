@@ -42,17 +42,10 @@ const fetchLeads = async () => {
 
 router.get('/notifications', requireAuth, async (req, res) => {
   try {
+    const userRole = (req.user.role || '').toLowerCase();
     const userEmail = req.user.email || '';
     const userName = req.user.name || (userEmail ? userEmail.split('@')[0] : '');
     const cleanUserName = userName.trim().toLowerCase();
-
-    // Helper to check if a record belongs to the user
-    const matchesUser = (personField) => {
-      if (!personField) return false;
-      const target = personField.trim().toLowerCase();
-      if (!target) return false;
-      return target === cleanUserName || target === userEmail.toLowerCase() || target.includes(cleanUserName);
-    };
 
     const [records, leads] = await Promise.all([
       fetchAndMapRecords().catch(() => []),
@@ -61,6 +54,75 @@ router.get('/notifications', requireAuth, async (req, res) => {
 
     const safeRecords = Array.isArray(records) ? records : [];
     const safeLeads = Array.isArray(leads) ? leads : [];
+
+    // ADMIN ROLE SPECIFIC NOTIFICATIONS
+    if (userRole === 'admin') {
+      // 1. Count properties under 'pending for qc'
+      const isPendingQc = (st) => {
+        const s = (st || '').trim().toLowerCase();
+        return s === 'pending for qc' || s.includes('pending for qc') || s.includes('pending_qc');
+      };
+      const pendingQcRecords = safeRecords.filter(r => isPendingQc(r['Status']));
+      const pendingQcCount = pendingQcRecords.length;
+
+      // 2. Unassigned internal leads so admin can assign them
+      const isUnassigned = (assignedVal) => {
+        if (!assignedVal) return true;
+        const target = assignedVal.trim().toLowerCase();
+        return target === '' || target === 'unassigned' || target === 'agent' || target === '-';
+      };
+      const unassignedLeads = safeLeads.filter(l => isUnassigned(l['Assigned To']));
+
+      const adminNotifications = [];
+
+      // Summary notification for pending for QC
+      if (pendingQcCount > 0) {
+        adminNotifications.push({
+          id: 'admin_pending_qc_summary',
+          type: 'pending_qc_summary',
+          title: 'Properties Pending for QC',
+          message: `${pendingQcCount} ${pendingQcCount === 1 ? 'property is' : 'properties are'} currently pending for QC verification.`,
+          count: pendingQcCount,
+          link: '/',
+          status: 'Pending QC'
+        });
+      }
+
+      // Unassigned leads notifications
+      unassignedLeads.forEach(l => {
+        adminNotifications.push({
+          id: `unassigned_lead_${l._id || l['Name of Property']}`,
+          type: 'unassigned_lead',
+          title: 'Unassigned Lead',
+          message: `Lead "${l['Name of Property'] || 'Unnamed Property'}" is not assigned to anyone. Click to assign.`,
+          property: l['Name of Property'] || 'Unnamed Property',
+          location: l['Location'] || '',
+          date: l['Date Added'] || '',
+          link: '/leads',
+          status: 'Unassigned'
+        });
+      });
+
+      return res.json({
+        isAdmin: true,
+        summary: {
+          pendingQcCount,
+          unassignedLeadsCount: unassignedLeads.length,
+          totalNotifications: adminNotifications.length
+        },
+        leadNotifications: adminNotifications.filter(n => n.type === 'unassigned_lead'),
+        propertyNotifications: adminNotifications.filter(n => n.type === 'pending_qc_summary'),
+        allNotifications: adminNotifications
+      });
+    }
+
+    // NON-ADMIN ROLE NOTIFICATIONS
+    const matchesUser = (personField) => {
+      if (!personField) return false;
+      const target = personField.trim().toLowerCase();
+      if (!target) return false;
+      return target === cleanUserName || target === userEmail.toLowerCase() || target.includes(cleanUserName);
+    };
 
     // 1. Assigned Leads notifications
     const assignedLeads = safeLeads.filter(l => matchesUser(l['Assigned To']));
@@ -107,7 +169,8 @@ router.get('/notifications', requireAuth, async (req, res) => {
       }
     });
 
-    res.json({
+    return res.json({
+      isAdmin: false,
       summary: {
         totalAssignedLeads: assignedLeads.length,
         liveCount,
