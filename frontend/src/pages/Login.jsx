@@ -61,14 +61,15 @@ const Login = () => {
         {/* Content Section */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center mt-8 sm:mt-12 mb-4">
           
-          {/* Left Hero Text */}
-          <div className="lg:col-span-6 text-white space-y-3 px-2 sm:px-4 text-center lg:text-left">
-            <h1 className="text-4xl sm:text-6xl font-bold tracking-tight drop-shadow-lg leading-tight font-sans">
-              FusionStays
-            </h1>
-            <p className="text-xl sm:text-2xl italic font-serif text-red-100/90 drop-shadow-md">
-              Property Addition
-            </p>
+          {/* Left Hero Logo */}
+          <div className="lg:col-span-6 flex flex-col items-center lg:items-start justify-center px-2 sm:px-4">
+            <div className="bg-white/90 backdrop-blur-md p-6 sm:p-8 rounded-3xl border border-white/40 shadow-xl max-w-md w-full flex items-center justify-center transition-all hover:scale-[1.02]">
+              <img 
+                src="/fusionstays-logo.png" 
+                alt="FusionStays - Travel Offbeat" 
+                className="w-full h-auto object-contain max-h-32"
+              />
+            </div>
           </div>
 
           {/* Right Glass Login Box */}
@@ -93,12 +94,12 @@ const Login = () => {
                 {/* Email / Username Input */}
                 <div className="relative group">
                   <input
-                    type="email"
+                    type="text"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full bg-white/15 border border-white/30 rounded-2xl py-3.5 px-5 pr-12 text-white placeholder-white/70 backdrop-blur-md focus:outline-none focus:bg-white/25 focus:border-white transition-all text-sm"
-                    placeholder="Enter username"
+                    placeholder="Enter email or username"
                   />
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 text-white/80 pointer-events-none">
                     <User className="w-5 h-5" />
