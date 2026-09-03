@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useMemo, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AuthContext } from '../context/AuthContext';
 import {
@@ -125,7 +125,7 @@ const Dashboard = () => {
       startDate,
       endDate
     }),
-    enabled: user?.role?.toLowerCase() !== 'team_member',
+    enabled: !['team_member', 'ops'].includes(user?.role?.toLowerCase()),
     placeholderData: (prev) => prev,
   });
 
@@ -136,7 +136,7 @@ const Dashboard = () => {
       const { data } = await api.get('/records?paginate=false');
       return data.data || [];
     },
-    enabled: user?.role?.toLowerCase() !== 'team_member',
+    enabled: !['team_member', 'ops'].includes(user?.role?.toLowerCase()),
     staleTime: 60000, // 1 minute
   });
 
@@ -299,6 +299,10 @@ const Dashboard = () => {
     }
   }, [queryClient]);
 
+  if (user?.role?.toLowerCase() === 'ops') {
+    return <Navigate to="/car-packages/master" replace />;
+  }
+
   if (user?.role?.toLowerCase() === 'team_member') {
     return <TeamMemberDashboard />;
   }
@@ -435,20 +439,46 @@ const Dashboard = () => {
                     <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md">{allRecords.length}</span>
                   </button>
                 </li>
-                <li>
-                  <button
-                    onClick={() => navigate('/browser-agent')}
-                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium transition-all"
-                  >
-                    <div className="flex items-center">
-                      <Globe className="w-5 h-5 mr-3 text-slate-400" />
-                      AI Browser Agent
-                    </div>
-                    <span className="bg-gradient-to-r from-brand-600 to-indigo-600 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">AI</span>
-                  </button>
-                </li>
               </ul>
             </div>
+
+            {/* Car Packages Section (Hidden for prop_add role) */}
+            {!['prop_add', 'prop/add'].includes(user?.role?.toLowerCase()) && (
+              <div className="px-3 space-y-2">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">Car Packages</h3>
+                <button
+                  onClick={() => navigate('/car-packages/master')}
+                  className="w-full flex items-center justify-between p-3.5 bg-gradient-to-br from-amber-600 to-orange-600 rounded-2xl text-white shadow-md hover:shadow-amber-200/50 transition-all transform hover:-translate-y-1 active:scale-95 group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md group-hover:scale-110 transition-transform">
+                      <Layers className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="text-left">
+                      <div className="text-xs font-bold leading-tight">Car Package Master</div>
+                      <div className="text-[10px] text-amber-100 font-medium">Sales & bookings</div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-amber-200" />
+                </button>
+
+                <button
+                  onClick={() => navigate('/car-packages/daywise')}
+                  className="w-full flex items-center justify-between p-3.5 bg-gradient-to-br from-teal-600 to-cyan-700 rounded-2xl text-white shadow-md hover:shadow-teal-200/50 transition-all transform hover:-translate-y-1 active:scale-95 group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md group-hover:scale-110 transition-transform">
+                      <Calendar className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="text-left">
+                      <div className="text-xs font-bold leading-tight">Daywise Operations</div>
+                      <div className="text-[10px] text-teal-100 font-medium">Daily route & vehicle logs</div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-teal-200" />
+                </button>
+              </div>
+            )}
 
             <div className="px-3 space-y-3">
               <button
@@ -527,6 +557,7 @@ const Dashboard = () => {
 
           </div>
         </aside>
+
 
         <main className={`flex-1 w-full bg-slate-200/80 p-4 sm:p-6 lg:px-8 lg:py-6 overflow-y-auto h-[calc(100vh-64px)] relative transition-all duration-300 ${isSidebarOpen ? 'lg:pl-80' : 'pl-4'}`}>
           <div className="w-full">

@@ -58,6 +58,9 @@ const normalizeDateStr = (dStr) => {
 // GET all records with Pagination & Filtering (Task 2)
 router.get('/records', requireAuth, async (req, res) => {
   try {
+    if (req.user?.role?.toLowerCase() === 'ops') {
+      return res.status(403).json({ message: 'Access denied. Ops role cannot access property database.' });
+    }
     const {
       page = 1,
       limit = 50,

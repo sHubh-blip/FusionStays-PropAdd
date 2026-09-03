@@ -33,7 +33,11 @@ const SetNewPassword = () => {
     const result = await resetPassword(newPassword);
 
     if (result.success) {
-      navigate('/dashboard');
+      if (result.user?.role?.toLowerCase() === 'ops') {
+        navigate('/car-packages/master');
+      } else {
+        navigate('/dashboard');
+      }
     } else {
       setError(result.message);
       setIsSubmitting(false);

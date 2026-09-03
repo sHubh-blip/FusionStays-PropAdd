@@ -7,7 +7,8 @@ import InternalLeads from './pages/InternalLeads';
 import Reports from './pages/Reports';
 import DropdownManager from './pages/DropdownManager';
 import UserManagement from './pages/UserManagement';
-import BrowserAgent from './pages/BrowserAgent';
+import CarPackageMaster from './pages/CarPackageMaster';
+import CarPackageDaywise from './pages/CarPackageDaywise';
 
 
 import SetNewPassword from './pages/SetNewPassword';
@@ -33,16 +34,29 @@ const ProtectedRoute = ({ children, allowedRoles, allowPendingReset = false }) =
     return <Navigate to="/set-new-password" replace />;
   }
 
+  const isOps = user.role?.toLowerCase() === 'ops';
+
   if (!user.mustResetPassword && allowPendingReset) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={isOps ? "/car-packages/master" : "/dashboard"} replace />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    // If not authorized, redirect to main dashboard
-    return <Navigate to="/dashboard" replace />;
+  if (allowedRoles && !allowedRoles.some(r => r.toLowerCase() === user.role?.toLowerCase())) {
+    // If not authorized, redirect Ops to car packages, else to dashboard
+    return <Navigate to={isOps ? "/car-packages/master" : "/dashboard"} replace />;
   }
 
   return children;
+};
+
+// Root redirect helper based on role
+const RootRedirect = () => {
+  const { user, isLoading } = React.useContext(AuthContext);
+  if (isLoading) return null;
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role?.toLowerCase() === 'ops') {
+    return <Navigate to="/car-packages/master" replace />;
+  }
+  return <Navigate to="/dashboard" replace />;
 };
 
 function App() {
@@ -62,7 +76,7 @@ function App() {
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['admin', 'prop_add', 'team_member']}>
                 <Dashboard />
               </ProtectedRoute>
             }
@@ -70,7 +84,7 @@ function App() {
           <Route
             path="/leads"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['admin', 'prop_add', 'team_member']}>
                 <InternalLeads />
               </ProtectedRoute>
             }
@@ -78,8 +92,24 @@ function App() {
           <Route
             path="/reports"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['admin', 'prop_add']}>
                 <Reports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/car-packages/master"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'ops']}>
+                <CarPackageMaster />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/car-packages/daywise"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'ops']}>
+                <CarPackageDaywise />
               </ProtectedRoute>
             }
           />
@@ -99,21 +129,16 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/browser-agent"
-            element={
-              <ProtectedRoute>
-                <BrowserAgent />
-              </ProtectedRoute>
-            }
-          />
 
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<RootRedirect />} />
+          <Route path="*" element={<RootRedirect />} />
         </Routes>
+
       </BrowserRouter>
     </AuthProvider>
   );
 }
+
 
 export default App;
 

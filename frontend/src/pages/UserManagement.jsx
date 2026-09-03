@@ -310,13 +310,16 @@ const UserManagement = () => {
                               onChange={(e) => handleRoleChange(item, e.target.value)}
                               className={`appearance-none flex items-center gap-1.5 px-3 py-1 pr-7 rounded-full text-xs font-bold transition-all cursor-pointer border focus:outline-none focus:ring-2 focus:ring-[#6D8196] ${item.role === 'admin'
                                 ? 'bg-[#4A4A4A] text-white border-[#6D8196]'
-                                : item.role === 'team_member'
-                                  ? 'bg-[#CBCBCB] text-[#4A4A4A] border-[#6D8196]'
-                                  : 'bg-[#6D8196] text-white border-[#CBCBCB]'
+                                : item.role === 'ops'
+                                  ? 'bg-amber-600 text-white border-amber-700'
+                                  : item.role === 'team_member'
+                                    ? 'bg-[#CBCBCB] text-[#4A4A4A] border-[#6D8196]'
+                                    : 'bg-[#6D8196] text-white border-[#CBCBCB]'
                                 } ${isSelf ? 'cursor-not-allowed opacity-80' : ''}`}
                             >
                               <option value="admin" className="bg-[#4A4A4A] text-white">Admin</option>
                               <option value="prop_add" className="bg-[#6D8196] text-white">Prop/Add</option>
+                              <option value="ops" className="bg-amber-600 text-white">Ops</option>
                               <option value="team_member" className="bg-[#CBCBCB] text-[#4A4A4A]">Team Member</option>
                             </select>
                             <ChevronDown className="w-3.5 h-3.5 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-current" />
@@ -444,6 +447,7 @@ const UserManagement = () => {
                   >
                     <option value="admin">Admin</option>
                     <option value="prop_add">Prop/Add</option>
+                    <option value="ops">Ops</option>
                     <option value="team_member">Team Member</option>
                   </select>
                 </div>
@@ -592,6 +596,7 @@ const UserManagement = () => {
                   >
                     <option value="admin">Admin</option>
                     <option value="prop_add">Prop/Add</option>
+                    <option value="ops">Ops</option>
                     <option value="team_member">Team Member</option>
                   </select>
                 </div>

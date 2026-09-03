@@ -24,6 +24,8 @@ const Login = () => {
     if (result.success) {
       if (result.user?.mustResetPassword) {
         navigate('/set-new-password');
+      } else if (result.user?.role?.toLowerCase() === 'ops') {
+        navigate('/car-packages/master');
       } else {
         navigate('/dashboard');
       }

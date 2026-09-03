@@ -12,8 +12,8 @@ const optionsRoutes = require('./controllers/optionsController');
 const dropdownRoutes = require('./controllers/dropdownController');
 const userRoutes = require('./controllers/userController');
 const messageRoutes = require('./controllers/messageController');
-const agentRoutes = require('./controllers/agentController');
 const notificationsRoutes = require('./controllers/notificationsController');
+const carPackageRoutes = require('./controllers/carPackageController');
 
 const app = express();
 
@@ -46,8 +46,9 @@ app.use('/api', optionsRoutes);
 app.use('/api', dropdownRoutes);
 app.use('/api', userRoutes);
 app.use('/api', messageRoutes);
-app.use('/api', agentRoutes);
 app.use('/api', notificationsRoutes);
+app.use('/api', carPackageRoutes);
+
 
 
 // Static files for uploads
@@ -63,6 +64,7 @@ app.listen(PORT, () => {
   const { fetchAndMapRecords } = require('./services/sheetService');
   const { getUserSheet } = require('./services/user');
   const { initializeMessageHistory } = require('./services/messageService');
+  const { fetchCarMasterRecords, fetchCarDaywiseRecords, CAR_MASTER_CACHE_KEY, CAR_DAYWISE_CACHE_KEY } = require('./services/carSheetService');
   const PREFETCH_INTERVAL = 3 * 60 * 1000; // 3 minutes to stay within Google API quota limits
   
   async function initializeServerData() {
@@ -78,6 +80,18 @@ app.listen(PORT, () => {
       console.error('[Prefetch] Failed:', err.message);
     }
 
+    try {
+      const [carMaster, carDaywise] = await Promise.all([
+        fetchCarMasterRecords(),
+        fetchCarDaywiseRecords()
+      ]);
+      if (carMaster) cache.set(CAR_MASTER_CACHE_KEY, carMaster, 300);
+      if (carDaywise) cache.set(CAR_DAYWISE_CACHE_KEY, carDaywise, 300);
+      console.log(`[Prefetch] Successfully cached ${carMaster?.length || 0} car master & ${carDaywise?.length || 0} car daywise records`);
+    } catch (err) {
+      console.error('[Prefetch Car Packages] Failed:', err.message);
+    }
+
     setTimeout(() => {
       getUserSheet().catch(err => console.error("Failed to initialize Users sheet:", err.message));
     }, 2000);
@@ -91,3 +105,4 @@ app.listen(PORT, () => {
   initializeServerData();
   setInterval(initializeServerData, PREFETCH_INTERVAL);
 });
+
