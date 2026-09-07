@@ -23,10 +23,11 @@ const CarWhatsAppMessageModal = ({ booking, daywise = [], onClose }) => {
   const advanceAmount = booking?.["Advance Recieved"] || "5000";
   const dueCollection = booking?.["Due Collection"] || "Guest Collection";
 
-  // Build the standardized WhatsApp message format
+  // Build the standardized WhatsApp message format with Guest Name
   const generateMessage = () => {
     let lines = [];
     lines.push(`*CONFIRMED CAR BOOKING*`);
+    lines.push(`*Guest Name-* ${guestName}`);
     lines.push(``);
 
     if (daywise && daywise.length > 0) {

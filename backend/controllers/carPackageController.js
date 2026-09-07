@@ -410,5 +410,165 @@ router.post('/car-packages/sync', requireAuth, async (req, res) => {
   }
 });
 
+// PUT /api/car-packages/master/:id - Edit an existing Master Booking entry
+router.put('/car-packages/master/:id', requireAuth, async (req, res) => {
+  try {
+    const id = req.params.id; // row index or Booking ID
+    const updates = req.body;
+
+    const doc = await initializeCarSheets();
+    if (!doc) {
+      return res.status(500).json({ message: "Unable to connect to Google Sheets." });
+    }
+
+    const masterSheet = doc.sheetsByTitle['Car Booking Master 26'] ||
+                        doc.sheetsByTitle['Car Booking Master'] ||
+                        doc.sheetsByIndex[0];
+
+    await masterSheet.loadHeaderRow();
+    const rows = await masterSheet.getRows({ offset: 0, limit: 5000 });
+    
+    // Match by _rowIndex or Booking ID / Vendorwise ID
+    const rowToUpdate = rows.find(r => 
+      r.rowNumber.toString() === id.toString() ||
+      (r.get('Booking ID') && r.get('Booking ID').trim().toLowerCase() === id.trim().toLowerCase()) ||
+      (r.get('Vendorwise ID') && r.get('Vendorwise ID').trim().toLowerCase() === id.trim().toLowerCase())
+    );
+
+    if (!rowToUpdate) {
+      return res.status(404).json({ message: 'Master booking entry not found' });
+    }
+
+    const updatableColumns = [
+      "Guest Name", "Contact No", "Pax", "Start City", "Start Date", "End Date",
+      "Booking Date", "Booking Month", "Check in Month", "Total Sales",
+      "Billing Amt", "GST amt", "Purchase Cost", "Profit", "Advance Recieved",
+      "Due Collection", "Status", "Name"
+    ];
+
+    updatableColumns.forEach(col => {
+      const matchKey = Object.keys(updates).find(k => k.trim().toLowerCase() === col.toLowerCase());
+      if (matchKey !== undefined && updates[matchKey] !== undefined) {
+        rowToUpdate.set(col, updates[matchKey]);
+      } else if (updates[col] !== undefined) {
+        rowToUpdate.set(col, updates[col]);
+      }
+    });
+
+    await rowToUpdate.save();
+
+    cache.del(CAR_MASTER_CACHE_KEY);
+
+    res.json({
+      success: true,
+      message: 'Master booking entry updated successfully'
+    });
+  } catch (err) {
+    console.error("Failed to update car master entry:", err);
+    res.status(500).json({ message: "Failed to update entry", error: err.message });
+  }
+});
+
+// PATCH /api/car-packages/master/:id/status - Quick inline status change
+router.patch('/car-packages/master/:id/status', requireAuth, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ message: "Status value is required" });
+    }
+
+    const doc = await initializeCarSheets();
+    if (!doc) {
+      return res.status(500).json({ message: "Unable to connect to Google Sheets." });
+    }
+
+    const masterSheet = doc.sheetsByTitle['Car Booking Master 26'] ||
+                        doc.sheetsByTitle['Car Booking Master'] ||
+                        doc.sheetsByIndex[0];
+
+    await masterSheet.loadHeaderRow();
+    if (!masterSheet.headerValues.some(h => h.toLowerCase().trim() === 'status')) {
+      await masterSheet.setHeaderRow([...masterSheet.headerValues, 'Status']);
+      await masterSheet.loadHeaderRow();
+    }
+
+    const rows = await masterSheet.getRows({ offset: 0, limit: 5000 });
+    const rowToUpdate = rows.find(r => 
+      r.rowNumber.toString() === id.toString() ||
+      (r.get('Booking ID') && r.get('Booking ID').trim().toLowerCase() === id.trim().toLowerCase()) ||
+      (r.get('Vendorwise ID') && r.get('Vendorwise ID').trim().toLowerCase() === id.trim().toLowerCase())
+    );
+
+    if (!rowToUpdate) {
+      return res.status(404).json({ message: 'Master booking entry not found' });
+    }
+
+    rowToUpdate.set('Status', status);
+    await rowToUpdate.save();
+
+    cache.del(CAR_MASTER_CACHE_KEY);
+
+    res.json({
+      success: true,
+      message: `Status updated to ${status}`,
+      status
+    });
+  } catch (err) {
+    console.error("Failed to update status:", err);
+    res.status(500).json({ message: "Failed to update status", error: err.message });
+  }
+});
+
+// PUT /api/car-packages/daywise/:id - Edit an existing Daywise Itinerary entry
+router.put('/car-packages/daywise/:id', requireAuth, async (req, res) => {
+  try {
+    const id = req.params.id; // row index
+    const updates = req.body;
+
+    const doc = await initializeCarSheets();
+    if (!doc) {
+      return res.status(500).json({ message: "Unable to connect to Google Sheets." });
+    }
+
+    const daywiseSheet = doc.sheetsByTitle['Daywise'] ||
+                         doc.sheetsByTitle['Day wise'] ||
+                         doc.sheetsByIndex[1];
+
+    await daywiseSheet.loadHeaderRow();
+    const rows = await daywiseSheet.getRows({ offset: 0, limit: 5000 });
+
+    const rowToUpdate = rows.find(r => r.rowNumber.toString() === id.toString());
+
+    if (!rowToUpdate) {
+      return res.status(404).json({ message: 'Daywise itinerary entry not found' });
+    }
+
+    const updatableColumns = [
+      "Start Date", "From", "To", "Itinerary", "Car Type", "No of Cars", 
+      "Vendor", "Name", "Guest Name", "Contact No"
+    ];
+
+    updatableColumns.forEach(col => {
+      if (updates[col] !== undefined) {
+        rowToUpdate.set(col, updates[col]);
+      }
+    });
+
+    await rowToUpdate.save();
+
+    cache.del(CAR_DAYWISE_CACHE_KEY);
+
+    res.json({
+      success: true,
+      message: 'Daywise itinerary entry updated successfully'
+    });
+  } catch (err) {
+    console.error("Failed to update car daywise entry:", err);
+    res.status(500).json({ message: "Failed to update daywise entry", error: err.message });
+  }
+});
+
 module.exports = router;
 

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { X, Save, Plus, Trash2, Calendar, User, Phone, MapPin, DollarSign, Car, Building2, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
+import { X, Save, Plus, Trash2, Calendar, User, Phone, MapPin, DollarSign, Car, Building2, AlertCircle, ChevronDown } from 'lucide-react';
 import api from '../api';
 import { AuthContext } from '../context/AuthContext';
 
@@ -47,10 +47,127 @@ const formatToISODate = (displayStr) => {
   return '';
 };
 
+// Smart Autocomplete Input Component
+const SmartSearchInput = ({
+  value = '',
+  onChange,
+  options = [],
+  placeholder = '',
+  className = '',
+  required = false
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filteredOptions = options.filter(opt => {
+    if (!opt) return false;
+    const str = String(opt).trim();
+    if (!value) return true;
+    return str.toLowerCase().includes(value.toLowerCase());
+  });
+
+  return (
+    <div className="relative w-full" ref={containerRef}>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setIsOpen(true);
+        }}
+        onFocus={() => setIsOpen(true)}
+        placeholder={placeholder}
+        required={required}
+        className={className}
+        autoComplete="off"
+      />
+      {isOpen && filteredOptions.length > 0 && (
+        <div className="absolute z-50 left-0 right-0 top-full mt-1 max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl custom-scrollbar py-1">
+          {filteredOptions.map((opt, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => {
+                onChange(opt);
+                setIsOpen(false);
+              }}
+              className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 hover:bg-brand-50 hover:text-brand-700 transition-colors flex items-center justify-between"
+            >
+              <span>{opt}</span>
+              {value && opt.toLowerCase() === value.toLowerCase() && (
+                <span className="text-[10px] text-brand-600 font-bold">Selected</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const CarBookingModal = ({ onClose, onSuccess }) => {
   const { user } = useContext(AuthContext);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // Distinct options loaded from existing daywise & master records
+  const [dropdownOptions, setDropdownOptions] = useState({
+    fromCities: ['NJP', 'Siliguri', 'Bagdogra', 'Darjeeling', 'Gangtok', 'Kalimpong', 'Pelling', 'Lachung', 'Lachen'],
+    toCities: ['Darjeeling', 'Gangtok', 'Kalimpong', 'Pelling', 'Lachung', 'Lachen', 'NJP', 'Bagdogra', 'Siliguri'],
+    carTypes: ['WagonR', 'Innova', 'Sumo', 'Bolero', 'Swift Dzire', 'Ertiga', 'Scorpio', 'Crysta', 'Tempo Traveller'],
+    vendors: ['Samragi Homestays', 'Mahakal Resort', 'Darjeeling Travels', 'Sikkim Cabs', 'Himalayan Wheels'],
+    itineraries: [
+      'Pickup from NJP and proceed to hotel with sightseeing en route.',
+      'Local sightseeing and transfers as per package schedule.',
+      'Drop to NJP Railway Station / Bagdogra Airport.'
+    ]
+  });
+
+  // Fetch unique past values for smart autocomplete
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const res = await api.get('/car-packages/daywise?paginate=false');
+        const rows = res.data.data || [];
+        if (rows.length > 0) {
+          const fromSet = new Set(dropdownOptions.fromCities);
+          const toSet = new Set(dropdownOptions.toCities);
+          const carSet = new Set(dropdownOptions.carTypes);
+          const vendorSet = new Set(dropdownOptions.vendors);
+          const itinSet = new Set(dropdownOptions.itineraries);
+
+          rows.forEach(r => {
+            if (r.From) fromSet.add(r.From.trim());
+            if (r.To) toSet.add(r.To.trim());
+            if (r["Car Type"]) carSet.add(r["Car Type"].trim());
+            if (r.Vendor) vendorSet.add(r.Vendor.trim());
+            if (r.Itinerary) itinSet.add(r.Itinerary.trim());
+          });
+
+          setDropdownOptions({
+            fromCities: [...fromSet].filter(Boolean),
+            toCities: [...toSet].filter(Boolean),
+            carTypes: [...carSet].filter(Boolean),
+            vendors: [...vendorSet].filter(Boolean),
+            itineraries: [...itinSet].filter(Boolean)
+          });
+        }
+      } catch (err) {
+        console.warn("Could not fetch daywise autocomplete options:", err);
+      }
+    };
+    fetchOptions();
+  }, []);
 
   // Master Details State
   const [masterData, setMasterData] = useState({
@@ -64,7 +181,7 @@ const CarBookingModal = ({ onClose, onSuccess }) => {
     guestName: '',
     contactNo: '',
     pax: '2',
-    startCity: 'NJP',
+    startCity: '',
     billingAmt: '',
     gstAmt: '',
     totalSales: '',
@@ -81,16 +198,16 @@ const CarBookingModal = ({ onClose, onSuccess }) => {
     }
   }, [user]);
 
-  // Daywise Itinerary state (dynamic rows)
+  // Daywise Itinerary state: initialized with empty values (not pre-filled)
   const [daywiseRows, setDaywiseRows] = useState([
     {
       startDate: '',
-      from: 'NJP',
-      to: 'Darjeeling',
-      itinerary: 'Pickup from NJP and proceed to hotel with sightseeing en route.',
-      carType: 'WagonR',
+      from: '',
+      to: '',
+      itinerary: '',
+      carType: '',
       noOfCars: '1',
-      vendor: 'Samragi Homestays'
+      vendor: ''
     }
   ]);
 
@@ -114,19 +231,22 @@ const CarBookingModal = ({ onClose, onSuccess }) => {
     setMasterData(prev => {
       const updated = { ...prev, [field]: val };
       
-      // Auto compute profit & GST if sales/cost changes
-      if (field === 'totalSales' || field === 'purchaseCost' || field === 'billingAmt') {
-        const sales = parseFloat(updated.totalSales) || 0;
-        const cost = parseFloat(updated.purchaseCost) || 0;
+      // Auto compute profit: Profit = Billing Amount - Purchase Cost
+      // If totalSales changes, update billingAmt (base) & gstAmt
+      if (field === 'totalSales') {
+        const sales = parseFloat(val) || 0;
         if (sales > 0) {
-          if (!updated.billingAmt || field === 'totalSales') {
-            const base = Math.round(sales / 1.05);
-            updated.billingAmt = base.toString();
-            updated.gstAmt = (sales - base).toString();
-          }
-          if (cost > 0) {
-            updated.profit = (sales - cost).toString();
-          }
+          const base = Math.round(sales / 1.05);
+          updated.billingAmt = base.toString();
+          updated.gstAmt = (sales - base).toString();
+          const cost = parseFloat(updated.purchaseCost) || 0;
+          updated.profit = (base - cost).toString();
+        }
+      } else if (field === 'billingAmt' || field === 'purchaseCost') {
+        const billing = parseFloat(updated.billingAmt) || 0;
+        const cost = parseFloat(updated.purchaseCost) || 0;
+        if (billing > 0 || cost > 0) {
+          updated.profit = (billing - cost).toString();
         }
       }
 
@@ -152,17 +272,16 @@ const CarBookingModal = ({ onClose, onSuccess }) => {
   };
 
   const addDaywiseRow = () => {
-    const lastRow = daywiseRows[daywiseRows.length - 1];
     setDaywiseRows(prev => [
       ...prev,
       {
         startDate: '',
-        from: lastRow ? lastRow.to : 'Darjeeling',
-        to: lastRow ? lastRow.to : 'Darjeeling',
-        itinerary: 'Local sightseeing and transfers as per package schedule.',
-        carType: lastRow ? lastRow.carType : 'WagonR',
-        noOfCars: lastRow ? lastRow.noOfCars : '1',
-        vendor: lastRow ? lastRow.vendor : 'Samragi Homestays'
+        from: '',
+        to: '',
+        itinerary: '',
+        carType: '',
+        noOfCars: '1',
+        vendor: ''
       }
     ]);
   };
@@ -337,10 +456,10 @@ const CarBookingModal = ({ onClose, onSuccess }) => {
 
               <div>
                 <label className="font-bold text-slate-700 block mb-1">Start City</label>
-                <input
-                  type="text"
+                <SmartSearchInput
                   value={masterData.startCity}
-                  onChange={(e) => handleMasterChange('startCity', e.target.value)}
+                  onChange={(val) => handleMasterChange('startCity', val)}
+                  options={dropdownOptions.fromCities}
                   placeholder="e.g. NJP / Siliguri / Bagdogra"
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-brand-500 outline-none"
                 />
@@ -407,7 +526,18 @@ const CarBookingModal = ({ onClose, onSuccess }) => {
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Purchase / Vendor Cost (₹)</label>
+                <label className="font-bold text-slate-700 block mb-1">Billing Amount (Base)</label>
+                <input
+                  type="number"
+                  value={masterData.billingAmt}
+                  onChange={(e) => handleMasterChange('billingAmt', e.target.value)}
+                  placeholder="e.g. 17143"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-semibold focus:bg-white focus:ring-2 focus:ring-brand-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Purchase Cost (₹)</label>
                 <input
                   type="number"
                   value={masterData.purchaseCost}
@@ -418,12 +548,14 @@ const CarBookingModal = ({ onClose, onSuccess }) => {
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Calculated Profit (₹)</label>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Profit = Billing - Purchase (₹)
+                </label>
                 <input
                   type="number"
                   value={masterData.profit}
                   onChange={(e) => handleMasterChange('profit', e.target.value)}
-                  placeholder="e.g. 2500"
+                  placeholder="e.g. 1643"
                   className="w-full px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl font-black text-amber-800 focus:bg-white focus:ring-2 focus:ring-brand-500 outline-none"
                 />
               </div>
@@ -439,6 +571,17 @@ const CarBookingModal = ({ onClose, onSuccess }) => {
                 />
               </div>
 
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">GST Amount (₹)</label>
+                <input
+                  type="number"
+                  value={masterData.gstAmt}
+                  onChange={(e) => handleMasterChange('gstAmt', e.target.value)}
+                  placeholder="e.g. 857"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 outline-none"
+                />
+              </div>
+
               <div className="md:col-span-2">
                 <label className="font-bold text-slate-700 block mb-1">Due Collection Details</label>
                 <input
@@ -447,26 +590,6 @@ const CarBookingModal = ({ onClose, onSuccess }) => {
                   onChange={(e) => handleMasterChange('dueCollection', e.target.value)}
                   placeholder="e.g. Guest Collection / Driver Cash"
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-brand-500 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Billing Amount (Base)</label>
-                <input
-                  type="number"
-                  value={masterData.billingAmt}
-                  onChange={(e) => handleMasterChange('billingAmt', e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">GST Amount</label>
-                <input
-                  type="number"
-                  value={masterData.gstAmt}
-                  onChange={(e) => handleMasterChange('gstAmt', e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 outline-none"
                 />
               </div>
 
@@ -529,10 +652,10 @@ const CarBookingModal = ({ onClose, onSuccess }) => {
 
                     <div>
                       <label className="font-bold text-slate-700 block mb-1">From</label>
-                      <input
-                        type="text"
+                      <SmartSearchInput
                         value={row.from}
-                        onChange={(e) => handleDaywiseChange(idx, 'from', e.target.value)}
+                        onChange={(val) => handleDaywiseChange(idx, 'from', val)}
+                        options={dropdownOptions.fromCities}
                         placeholder="e.g. NJP"
                         className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-900 outline-none focus:ring-1 focus:ring-brand-500"
                       />
@@ -540,10 +663,10 @@ const CarBookingModal = ({ onClose, onSuccess }) => {
 
                     <div>
                       <label className="font-bold text-slate-700 block mb-1">To</label>
-                      <input
-                        type="text"
+                      <SmartSearchInput
                         value={row.to}
-                        onChange={(e) => handleDaywiseChange(idx, 'to', e.target.value)}
+                        onChange={(val) => handleDaywiseChange(idx, 'to', val)}
+                        options={dropdownOptions.toCities}
                         placeholder="e.g. Darjeeling"
                         className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-900 outline-none focus:ring-1 focus:ring-brand-500"
                       />
@@ -551,10 +674,10 @@ const CarBookingModal = ({ onClose, onSuccess }) => {
 
                     <div>
                       <label className="font-bold text-slate-700 block mb-1">Car Type</label>
-                      <input
-                        type="text"
+                      <SmartSearchInput
                         value={row.carType}
-                        onChange={(e) => handleDaywiseChange(idx, 'carType', e.target.value)}
+                        onChange={(val) => handleDaywiseChange(idx, 'carType', val)}
+                        options={dropdownOptions.carTypes}
                         placeholder="e.g. WagonR / Innova / Sumo"
                         className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-900 outline-none focus:ring-1 focus:ring-brand-500"
                       />
@@ -562,10 +685,10 @@ const CarBookingModal = ({ onClose, onSuccess }) => {
 
                     <div className="md:col-span-2">
                       <label className="font-bold text-slate-700 block mb-1">Assigned Vendor</label>
-                      <input
-                        type="text"
+                      <SmartSearchInput
                         value={row.vendor}
-                        onChange={(e) => handleDaywiseChange(idx, 'vendor', e.target.value)}
+                        onChange={(val) => handleDaywiseChange(idx, 'vendor', val)}
+                        options={dropdownOptions.vendors}
                         placeholder="e.g. Samragi Homestays / Mahakal Resort"
                         className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-900 outline-none focus:ring-1 focus:ring-brand-500"
                       />
@@ -583,11 +706,11 @@ const CarBookingModal = ({ onClose, onSuccess }) => {
 
                     <div className="md:col-span-4">
                       <label className="font-bold text-slate-700 block mb-1">Itinerary / Sightseeing Plan</label>
-                      <textarea
-                        rows={2}
+                      <SmartSearchInput
                         value={row.itinerary}
-                        onChange={(e) => handleDaywiseChange(idx, 'itinerary', e.target.value)}
-                        placeholder="Detail the pickup points, sightseeing spots, viewpoints, and drops..."
+                        onChange={(val) => handleDaywiseChange(idx, 'itinerary', val)}
+                        options={dropdownOptions.itineraries}
+                        placeholder="Type or select itinerary / sightseeing plan..."
                         className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 outline-none focus:ring-1 focus:ring-brand-500"
                       />
                     </div>

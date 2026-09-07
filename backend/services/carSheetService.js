@@ -82,6 +82,14 @@ const fetchCarMasterRecords = async () => {
       if (!sheet.headerValues || sheet.headerValues.length === 0) {
         return [];
       }
+      if (!sheet.headerValues.some(h => h.toLowerCase().trim() === 'status')) {
+        try {
+          await sheet.setHeaderRow([...sheet.headerValues, 'Status']);
+          await sheet.loadHeaderRow();
+        } catch (e) {
+          console.warn("Could not auto-add Status header:", e.message);
+        }
+      }
       const rows = await sheet.getRows({ offset: 0, limit: 5000 });
       return mapCarMasterRows(rows, sheet.headerValues);
     } catch (e) {

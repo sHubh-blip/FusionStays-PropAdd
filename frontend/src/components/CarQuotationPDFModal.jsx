@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { X, Printer, Download, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
+import { X, Printer, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 
 const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
   const printRef = useRef();
@@ -32,7 +32,7 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
   const advanceAmount = booking?.["Advance Recieved"] || "5000";
 
   // Current formatted quotation date
-  const quotationDate = "1st September 2026";
+  const quotationDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
   const handlePrint = () => {
     window.print();
@@ -41,9 +41,15 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in overflow-y-auto">
       
-      {/* Print stylesheet override */}
+      {/* Print stylesheet override for multipage printing */}
       <style>{`
         @media print {
+          html, body {
+            height: auto !important;
+            min-height: 100% !important;
+            overflow: visible !important;
+            background: white !important;
+          }
           body * {
             visibility: hidden;
           }
@@ -51,18 +57,28 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
             visibility: visible;
           }
           #quotation-printable {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            margin: 0;
-            padding: 20mm;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 15mm 20mm !important;
             background: white !important;
-            color: black !important;
+            color: #1e293b !important;
             box-shadow: none !important;
+            border-radius: 0 !important;
           }
           .no-print {
             display: none !important;
+          }
+          .print-page {
+            page-break-after: always;
+            break-after: page;
+          }
+          .print-page:last-child {
+            page-break-after: avoid;
+            break-after: avoid;
           }
           .page-break {
             page-break-before: always;
@@ -93,7 +109,7 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
               className="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold rounded-xl shadow-md transition-all active:scale-95"
             >
               <Printer className="w-4 h-4" />
-              Print / Save PDF
+              Print / Save PDF (All Pages)
             </button>
             <button 
               onClick={onClose}
@@ -114,24 +130,16 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
           >
             
             {/* ====== PAGE 1 ====== */}
-            <div>
+            <div className="print-page">
               {/* Header */}
-              <div className="flex justify-between items-start border-b border-slate-200 pb-5">
+              <div className="flex justify-between items-center border-b border-slate-200 pb-5">
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    {/* Stylized Mountain Logo */}
-                    <div className="w-10 h-10 bg-gradient-to-tr from-rose-500 to-amber-500 rounded-lg flex items-center justify-center text-white font-black text-xl shadow-sm">
-                      FS
-                    </div>
-                    <div>
-                      <h1 className="text-2xl font-black tracking-tight text-slate-900 leading-none">
-                        Fusion<span className="text-rose-600">Stays</span>
-                      </h1>
-                      <p className="text-[10px] uppercase font-bold tracking-widest text-slate-400 mt-0.5">
-                        — Travel Offbeat —
-                      </p>
-                    </div>
-                  </div>
+                  {/* Official FusionStays Brand Logo Image */}
+                  <img
+                    src="/fusionstays-logo.png"
+                    alt="FusionStays Logo"
+                    className="h-12 w-auto object-contain max-w-[200px]"
+                  />
                 </div>
 
                 <div className="text-right">
@@ -249,16 +257,17 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
               </div>
             </div>
 
-            {/* Page Break for multi-page printing */}
-            <div className="page-break pt-8 border-t-2 border-dashed border-slate-200 mt-12">
+            {/* ====== PAGE 2 ====== */}
+            <div className="page-break pt-8 border-t-2 border-dashed border-slate-200 mt-12 print-page">
               
-              {/* Header Repeat */}
+              {/* Header Repeat with Logo */}
               <div className="flex justify-between items-center border-b border-slate-200 pb-4 mb-6">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-gradient-to-tr from-rose-500 to-amber-500 rounded-md flex items-center justify-center text-white font-black text-sm">
-                    FS
-                  </div>
-                  <span className="font-black text-slate-900">Fusion<span className="text-rose-600">Stays</span></span>
+                <div className="flex items-center gap-3">
+                  <img
+                    src="/fusionstays-logo.png"
+                    alt="FusionStays Logo"
+                    className="h-10 w-auto object-contain max-w-[160px]"
+                  />
                 </div>
                 <span className="text-[10px] uppercase font-bold text-slate-400">Terms & Policy</span>
               </div>

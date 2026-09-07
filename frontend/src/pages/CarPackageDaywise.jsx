@@ -4,10 +4,11 @@ import Sidebar from '../components/Sidebar';
 import CarWhatsAppMessageModal from '../components/CarWhatsAppMessageModal';
 import CarQuotationPDFModal from '../components/CarQuotationPDFModal';
 import CarBookingModal from '../components/CarBookingModal';
+import CarDaywiseEditModal from '../components/CarDaywiseEditModal';
 import { 
   Calendar, Search, RefreshCw, MessageSquare, FileText, 
   MapPin, Car, User, Phone, Navigation, ArrowRight, Filter, 
-  Building2, CheckCircle2, ChevronRight, Plus
+  Building2, CheckCircle2, ChevronRight, Plus, Edit
 } from 'lucide-react';
 
 const CarPackageDaywise = () => {
@@ -21,8 +22,13 @@ const CarPackageDaywise = () => {
   const [nameFilter, setNameFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('');
 
+  // Sidebar state
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedRowForEdit, setSelectedRowForEdit] = useState(null);
   const [selectedBookingForMsg, setSelectedBookingForMsg] = useState(null);
   const [selectedBookingForPDF, setSelectedBookingForPDF] = useState(null);
   const [daywiseData, setDaywiseData] = useState([]);
@@ -90,24 +96,52 @@ const CarPackageDaywise = () => {
   };
 
   return (
-    <div className="flex h-screen bg-slate-100 overflow-hidden font-sans">
-      <Sidebar />
+    <div className="flex h-screen bg-slate-100 overflow-hidden font-sans relative">
+      <Sidebar 
+        isOpen={isSidebarOpen}
+        isHovered={isSidebarHovered}
+        onClose={() => { setIsSidebarOpen(false); setIsSidebarHovered(false); }}
+        onMouseEnter={() => setIsSidebarHovered(true)}
+        onMouseLeave={() => setIsSidebarHovered(false)}
+      />
+
+      {/* Edge hover trigger for opening sidebar smoothly */}
+      {!isSidebarOpen && !isSidebarHovered && (
+        <div
+          className="fixed left-0 top-0 bottom-0 w-4 z-30 cursor-e-resize"
+          onMouseEnter={() => setIsSidebarHovered(true)}
+          title="Hover or scroll to open menu"
+        />
+      )}
 
       <main className="flex-1 flex flex-col min-w-0 overflow-y-auto custom-scrollbar">
         
         {/* Top Header */}
         <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-bold text-brand-600 uppercase tracking-wider mb-1">
-              <Calendar className="w-4 h-4" />
-              Operations & Itinerary Tracker
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsSidebarOpen(prev => !prev)}
+              className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all shadow-sm active:scale-95"
+              title="Toggle Navigation Menu"
+            >
+              <div className="flex flex-col gap-1 w-5">
+                <span className="h-0.5 w-full bg-slate-700 rounded-full"></span>
+                <span className="h-0.5 w-4 bg-slate-700 rounded-full"></span>
+                <span className="h-0.5 w-full bg-slate-700 rounded-full"></span>
+              </div>
+            </button>
+            <div>
+              <div className="flex items-center gap-2 text-xs font-bold text-brand-600 uppercase tracking-wider mb-1">
+                <Calendar className="w-4 h-4" />
+                Operations & Itinerary Tracker
+              </div>
+              <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
+                Daywise Car Details
+              </h1>
+              <p className="text-xs text-slate-500 font-medium">
+                Track daily vehicle dispatches, vendor assignments, sightseeing routes, and pickup schedules.
+              </p>
             </div>
-            <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
-              Daywise Car Details
-            </h1>
-            <p className="text-xs text-slate-500 font-medium">
-              Track daily vehicle dispatches, vendor assignments, sightseeing routes, and pickup schedules.
-            </p>
           </div>
 
           <div className="flex items-center gap-3">
@@ -236,18 +270,18 @@ const CarPackageDaywise = () => {
 
           {/* Daywise Table */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                    <th className="py-3.5 px-4">Handled By</th>
-                    <th className="py-3.5 px-4">Date</th>
-                    <th className="py-3.5 px-4">Booking & Guest</th>
-                    <th className="py-3.5 px-4">Route</th>
-                    <th className="py-3.5 px-4 w-2/5">Day Itinerary & Sightseeing</th>
-                    <th className="py-3.5 px-4">Car & Quantity</th>
-                    <th className="py-3.5 px-4">Assigned Vendor</th>
-                    <th className="py-3.5 px-4 text-center">Actions</th>
+                  <tr className="bg-slate-50/90 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    <th className="py-3 px-3 w-28 whitespace-nowrap">Handled By</th>
+                    <th className="py-3 px-3 w-32 whitespace-nowrap">Date</th>
+                    <th className="py-3 px-3 w-44 whitespace-nowrap">Booking & Guest</th>
+                    <th className="py-3 px-3 w-36 whitespace-nowrap">Route</th>
+                    <th className="py-3 px-3 w-28 whitespace-nowrap">Vehicle</th>
+                    <th className="py-3 px-3 w-28 whitespace-nowrap">Vendor</th>
+                    <th className="py-3 px-3 min-w-[200px]">Day Itinerary & Sightseeing</th>
+                    <th className="py-3 px-3 w-28 text-center whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
 
@@ -274,94 +308,102 @@ const CarPackageDaywise = () => {
                       <tr key={idx} className="hover:bg-slate-50/80 transition-colors group">
                         
                         {/* Handled By (Name column from sheet) */}
-                        <td className="py-3.5 px-4 whitespace-nowrap">
+                        <td className="py-2.5 px-3 whitespace-nowrap">
                           {r["Name"] ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-xs">
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-2xs">
                               <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-                              {r["Name"]}
+                              <span className="truncate max-w-[80px]" title={r["Name"]}>{r["Name"]}</span>
                             </span>
                           ) : (
-                            <span className="text-[11px] text-slate-400 font-medium italic">Unassigned</span>
+                            <span className="text-[10px] text-slate-400 font-medium italic">Unassigned</span>
                           )}
                         </td>
                         
                         {/* Date */}
-                        <td className="py-3.5 px-4 whitespace-nowrap">
-                          <div className="font-bold text-slate-900 flex items-center gap-1.5">
-                            <Calendar className="w-3.5 h-3.5 text-brand-600" />
-                            {r["Start Date"]}
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          <div className="font-bold text-slate-800 text-[11px] flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-brand-600 flex-shrink-0" />
+                            <span>{r["Start Date"]}</span>
                           </div>
                         </td>
 
                         {/* Booking & Guest */}
-                        <td className="py-3.5 px-4 whitespace-nowrap">
-                          <div className="font-bold text-slate-900 flex items-center gap-1.5">
-                            <User className="w-3.5 h-3.5 text-slate-400" />
-                            {r["Guest Name"]}
+                        <td className="py-2.5 px-3">
+                          <div className="font-bold text-slate-900 text-xs flex items-center gap-1 truncate" title={r["Guest Name"]}>
+                            <User className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                            <span className="truncate">{r["Guest Name"]}</span>
                           </div>
-                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                            ID: {r["Booking ID"] || r["Vendorwise ID"]}
+                          <div className="text-[10px] text-slate-500 font-mono flex items-center gap-2 mt-0.5">
+                            <span className="text-slate-400">{r["Booking ID"] || r["Vendorwise ID"]}</span>
+                            {r["Contact No"] && (
+                              <span className="flex items-center gap-0.5 text-slate-500">
+                                <Phone className="w-2.5 h-2.5 text-slate-400" />
+                                {r["Contact No"]}
+                              </span>
+                            )}
                           </div>
-                          {r["Contact No"] && (
-                            <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1 mt-0.5">
-                              <Phone className="w-3 h-3 text-slate-400" />
-                              {r["Contact No"]}
-                            </div>
-                          )}
                         </td>
 
                         {/* Route (From -> To) */}
-                        <td className="py-3.5 px-4 whitespace-nowrap">
-                          <div className="flex items-center gap-1.5 font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-lg w-fit">
-                            <span>{r["From"] || "Start"}</span>
-                            <ArrowRight className="w-3 h-3 text-slate-400" />
-                            <span>{r["To"] || "End"}</span>
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          <div className="flex items-center gap-1 font-bold text-slate-800 bg-slate-100 px-2 py-1 rounded-md text-[11px] w-fit">
+                            <span className="truncate max-w-[65px]" title={r["From"] || "Start"}>{r["From"] || "Start"}</span>
+                            <ArrowRight className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                            <span className="truncate max-w-[65px]" title={r["To"] || "End"}>{r["To"] || "End"}</span>
                           </div>
                         </td>
 
-                        {/* Itinerary */}
-                        <td className="py-3.5 px-4 text-slate-700 leading-relaxed">
-                          <div className="text-xs max-h-20 overflow-y-auto custom-scrollbar pr-2">
-                            {r["Itinerary"]}
+                        {/* Vehicle & Quantity */}
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          <div className="font-bold text-slate-900 text-[11px] flex items-center gap-1">
+                            <Car className="w-3 h-3 text-brand-600 flex-shrink-0" />
+                            <span className="truncate max-w-[80px]" title={r["Car Type"]}>{r["Car Type"] || "Car"}</span>
                           </div>
-                        </td>
-
-                        {/* Car & Quantity */}
-                        <td className="py-3.5 px-4 whitespace-nowrap">
-                          <div className="font-bold text-slate-900 flex items-center gap-1.5">
-                            <Car className="w-3.5 h-3.5 text-brand-600" />
-                            {r["Car Type"] || "Standard"}
-                          </div>
-                          <div className="text-[10px] text-slate-500 mt-0.5 font-semibold">
-                            Qty: <span className="text-brand-600 font-bold">{r["No of Cars"] || 1} Vehicle(s)</span>
+                          <div className="text-[10px] text-slate-500 font-semibold">
+                            Qty: <span className="text-brand-600 font-bold">{r["No of Cars"] || 1}</span>
                           </div>
                         </td>
 
                         {/* Assigned Vendor */}
-                        <td className="py-3.5 px-4 whitespace-nowrap">
-                          <div className="font-semibold text-slate-800 flex items-center gap-1.5 bg-brand-50/60 text-brand-900 px-2 py-1 rounded-md w-fit text-[11px]">
-                            <Building2 className="w-3 h-3 text-brand-600" />
-                            {r["Vendor"] || "Direct / In-house"}
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          <div className="font-semibold text-slate-800 flex items-center gap-1 bg-brand-50/70 text-brand-900 px-2 py-0.5 rounded-md text-[10px] w-fit" title={r["Vendor"]}>
+                            <Building2 className="w-3 h-3 text-brand-600 flex-shrink-0" />
+                            <span className="truncate max-w-[85px]">{r["Vendor"] || "Direct"}</span>
                           </div>
                         </td>
 
+                        {/* Itinerary */}
+                        <td className="py-2.5 px-3 text-slate-700">
+                          <p className="text-[11px] leading-snug line-clamp-2 max-w-xl" title={r["Itinerary"]}>
+                            {r["Itinerary"] || "No specific itinerary provided."}
+                          </p>
+                        </td>
+
                         {/* Quick Actions */}
-                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                          <div className="flex items-center justify-center gap-2">
+                        <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => setSelectedRowForEdit(r)}
+                              title="Edit Daywise Route & Vehicle Details"
+                              className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-all shadow-2xs active:scale-95"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+
                             <button
                               onClick={() => handleOpenWhatsAppModal(r)}
                               title="Generate WhatsApp Message"
-                              className="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl transition-all shadow-sm active:scale-95"
+                              className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg transition-all shadow-2xs active:scale-95"
                             >
-                              <MessageSquare className="w-4 h-4" />
+                              <MessageSquare className="w-3.5 h-3.5" />
                             </button>
 
                             <button
                               onClick={() => handleOpenPDFModal(r)}
                               title="Generate PDF Quotation"
-                              className="p-2 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl transition-all shadow-sm active:scale-95"
+                              className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg transition-all shadow-2xs active:scale-95"
                             >
-                              <FileText className="w-4 h-4" />
+                              <FileText className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </td>
@@ -377,6 +419,17 @@ const CarPackageDaywise = () => {
         </div>
 
       </main>
+
+      {/* Edit Daywise Modal */}
+      {selectedRowForEdit && (
+        <CarDaywiseEditModal
+          dayRow={selectedRowForEdit}
+          onClose={() => setSelectedRowForEdit(null)}
+          onSuccess={() => {
+            fetchDaywiseRecords();
+          }}
+        />
+      )}
 
       {/* Add New Car Booking Modal */}
       {isAddModalOpen && (
