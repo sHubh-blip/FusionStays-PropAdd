@@ -5,10 +5,11 @@ import CarWhatsAppMessageModal from '../components/CarWhatsAppMessageModal';
 import CarQuotationPDFModal from '../components/CarQuotationPDFModal';
 import CarBookingModal from '../components/CarBookingModal';
 import CarDaywiseEditModal from '../components/CarDaywiseEditModal';
+import CarPaymentStatusModal from '../components/CarPaymentStatusModal';
 import { 
   Calendar, Search, RefreshCw, MessageSquare, FileText, 
   MapPin, Car, User, Phone, Navigation, ArrowRight, Filter, 
-  Building2, CheckCircle2, ChevronRight, Plus, Edit
+  Building2, CheckCircle2, ChevronRight, Plus, Edit, CreditCard
 } from 'lucide-react';
 
 const CarPackageDaywise = () => {
@@ -21,6 +22,7 @@ const CarPackageDaywise = () => {
   const [carTypeFilter, setCarTypeFilter] = useState('all');
   const [nameFilter, setNameFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('');
+  const [selectedBookingForPayment, setSelectedBookingForPayment] = useState(null);
 
   // Sidebar state
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -382,6 +384,15 @@ const CarPackageDaywise = () => {
                         {/* Quick Actions */}
                         <td className="py-2.5 px-3 text-center whitespace-nowrap">
                           <div className="flex items-center justify-center gap-1.5">
+                            {/* Vendor Payment Status Button */}
+                            <button
+                              onClick={() => setSelectedBookingForPayment(r)}
+                              title="See / Add / Edit Vendor Payment Status & Ledger"
+                              className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg transition-all shadow-2xs active:scale-95 border border-emerald-200"
+                            >
+                              <CreditCard className="w-3.5 h-3.5" />
+                            </button>
+
                             <button
                               onClick={() => setSelectedRowForEdit(r)}
                               title="Edit Daywise Route & Vehicle Details"
@@ -457,6 +468,15 @@ const CarPackageDaywise = () => {
           booking={selectedBookingForPDF}
           daywise={daywiseData}
           onClose={() => setSelectedBookingForPDF(null)}
+        />
+      )}
+
+      {/* Vendor Payment & Accounts Modal */}
+      {selectedBookingForPayment && (
+        <CarPaymentStatusModal
+          booking={selectedBookingForPayment}
+          onClose={() => setSelectedBookingForPayment(null)}
+          onSuccess={() => fetchDaywiseRecords()}
         />
       )}
 

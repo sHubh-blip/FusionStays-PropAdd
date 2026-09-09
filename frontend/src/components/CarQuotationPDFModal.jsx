@@ -1,8 +1,9 @@
-import React, { useRef } from 'react';
-import { X, Printer, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { X, Printer, Download, CheckCircle2, XCircle, AlertTriangle, Loader2 } from 'lucide-react';
 
 const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
   const printRef = useRef();
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Extract variables
   const guestName = booking?.["Guest Name"] || daywise[0]?.["Guest Name"] || "Guest";
@@ -35,70 +36,281 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
   const quotationDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
   const handlePrint = () => {
-    window.print();
+    const printableEl = printRef.current;
+    if (!printableEl) return;
+
+    setIsGenerating(true);
+
+    // Create an isolated hidden iframe for clean multi-page document pagination
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.style.visibility = 'hidden';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) {
+      setIsGenerating(false);
+      window.print();
+      return;
+    }
+
+    // Set doc title so browser suggests this as the default filename when "Save as PDF" is selected
+    const safeGuestName = (guestName || 'Guest').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const bookingId = booking?.["Booking ID"] || booking?.["Vendorwise ID"] || "Quotation";
+    const filename = `Car_Quotation_${safeGuestName}_${bookingId}`;
+
+    // Collect stylesheets from parent head, EXCLUDING any print override styles that hide the body
+    const styleTags = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+      .filter(el => {
+        if (el.id === 'modal-main-print-override') return false;
+        if (el.tagName === 'STYLE' && el.innerHTML.includes('visibility: hidden')) return false;
+        return true;
+      })
+      .map(node => node.outerHTML)
+      .join('\n');
+
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <title>${filename}</title>
+        ${styleTags}
+        <style>
+          @page {
+            size: A4 portrait;
+            margin: 10mm 15mm;
+          }
+          *, *::before, *::after {
+            box-sizing: border-box;
+            visibility: visible !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+          html, body {
+            visibility: visible !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            color: #1e293b !important;
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+            width: 100% !important;
+            height: auto !important;
+            min-height: 100% !important;
+            overflow: visible !important;
+          }
+          #quotation-printable {
+            visibility: visible !important;
+            display: block !important;
+            width: 100% !important;
+            max-width: 800px !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            box-shadow: none !important;
+            border: none !important;
+            border-radius: 0 !important;
+          }
+          #quotation-printable * {
+            visibility: visible !important;
+          }
+          .print-page {
+            page-break-after: always !important;
+            break-after: page !important;
+            display: block !important;
+            width: 100% !important;
+            clear: both !important;
+          }
+          .print-page:last-child {
+            page-break-after: auto !important;
+            break-after: auto !important;
+          }
+          .page-break {
+            page-break-before: always !important;
+            break-before: page !important;
+            border-top: none !important;
+            margin-top: 0 !important;
+            padding-top: 10px !important;
+          }
+          .avoid-break {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+        </style>
+      </head>
+      <body>
+        <div id="quotation-printable">
+          ${printableEl.innerHTML}
+        </div>
+      </body>
+      </html>
+    `);
+    doc.close();
+
+    // Ensure all images are loaded inside the iframe before triggering print dialog
+    const images = Array.from(doc.images);
+    const imageLoadPromises = images.map(img => {
+      if (img.complete) return Promise.resolve();
+      return new Promise(resolve => {
+        img.onload = resolve;
+        img.onerror = resolve;
+      });
+    });
+
+    const fontsPromise = iframe.contentWindow?.document?.fonts?.ready || Promise.resolve();
+
+    Promise.all([...imageLoadPromises, fontsPromise]).then(() => {
+      setTimeout(() => {
+        setIsGenerating(false);
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch (err) {
+          console.error("Iframe print invocation error:", err);
+          window.print();
+        } finally {
+          setTimeout(() => {
+            try {
+              if (document.body.contains(iframe)) {
+                document.body.removeChild(iframe);
+              }
+            } catch (e) {}
+          }, 4000);
+        }
+      }, 350);
+    });
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in overflow-y-auto">
+    <div className="pdf-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in overflow-y-auto">
       
-      {/* Print stylesheet override for multipage printing */}
-      <style>{`
+      {/* Print stylesheet override for multipage printing fallback */}
+      <style id="modal-main-print-override">{`
         @media print {
+          @page {
+            size: A4 portrait;
+            margin: 12mm 15mm;
+          }
+
+          *, *::before, *::after {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+
           html, body {
             height: auto !important;
             min-height: 100% !important;
             overflow: visible !important;
             background: white !important;
+            margin: 0 !important;
+            padding: 0 !important;
           }
+
           body * {
             visibility: hidden;
           }
+
+          .no-print {
+            display: none !important;
+          }
+
+          /* Reset all modal containers so pagination is not clamped or truncated */
+          .pdf-modal-backdrop,
+          .pdf-modal-dialog,
+          .pdf-modal-content {
+            visibility: visible !important;
+            position: static !important;
+            display: block !important;
+            overflow: visible !important;
+            max-height: none !important;
+            height: auto !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: none !important;
+            background: white !important;
+            box-shadow: none !important;
+            inset: auto !important;
+            backdrop-filter: none !important;
+          }
+
           #quotation-printable, #quotation-printable * {
             visibility: visible;
           }
+
           #quotation-printable {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
+            position: static !important;
+            display: block !important;
+            left: auto !important;
+            top: auto !important;
             width: 100% !important;
             max-width: 100% !important;
-            margin: 0 !important;
-            padding: 15mm 20mm !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
             background: white !important;
             color: #1e293b !important;
             box-shadow: none !important;
             border-radius: 0 !important;
           }
-          .no-print {
-            display: none !important;
-          }
+
           .print-page {
-            page-break-after: always;
-            break-after: page;
+            page-break-after: always !important;
+            break-after: page !important;
+            display: block !important;
+            width: 100% !important;
+            clear: both !important;
           }
+
           .print-page:last-child {
-            page-break-after: avoid;
-            break-after: avoid;
+            page-break-after: auto !important;
+            break-after: auto !important;
           }
+
           .page-break {
-            page-break-before: always;
-            break-before: page;
+            page-break-before: always !important;
+            break-before: page !important;
+            border-top: none !important;
+            margin-top: 0 !important;
+            padding-top: 15px !important;
+          }
+
+          .avoid-break {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
         }
       `}</style>
 
-      <div className="bg-slate-100 w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 flex flex-col max-h-[92vh] overflow-hidden">
+      <div className="pdf-modal-dialog bg-slate-100 w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 flex flex-col max-h-[92vh] overflow-hidden">
         
         {/* Modal Top Bar */}
         <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between no-print">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-brand-500/20 text-brand-400 rounded-xl">
-              <Printer className="w-5 h-5" />
+            <div className="p-2.5 bg-brand-500/20 text-brand-400 rounded-xl">
+              <Printer className="w-5 h-5 text-amber-400" />
             </div>
             <div>
-              <h3 className="font-bold text-lg">Car Booking Quotation PDF</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-lg text-white">Car Booking Quotation PDF</h3>
+                <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  All 2 Pages
+                </span>
+              </div>
               <p className="text-xs text-slate-400">
-                Official FusionStays Price Quotation • {guestName} ({booking?.["Booking ID"] || "N/A"})
+                {guestName} • Booking ID: {booking?.["Booking ID"] || booking?.["Vendorwise ID"] || "N/A"}
               </p>
             </div>
           </div>
@@ -106,10 +318,21 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
           <div className="flex items-center gap-3">
             <button
               onClick={handlePrint}
-              className="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold rounded-xl shadow-md transition-all active:scale-95"
+              disabled={isGenerating}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-xs font-bold rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+              title="Download all pages as PDF by selecting 'Save as PDF' in the destination dropdown"
             >
-              <Printer className="w-4 h-4" />
-              Print / Save PDF (All Pages)
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Preparing PDF...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  Download / Save PDF (All Pages)
+                </>
+              )}
             </button>
             <button 
               onClick={onClose}
@@ -121,8 +344,21 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
         </div>
 
         {/* Printable Document Container */}
-        <div className="p-6 md:p-10 overflow-y-auto flex-1 bg-slate-200/80 custom-scrollbar flex justify-center">
+        <div className="pdf-modal-content p-6 md:p-10 overflow-y-auto flex-1 bg-slate-200/80 custom-scrollbar flex flex-col items-center">
           
+          {/* Download helper banner */}
+          <div className="mb-4 bg-amber-50 border border-amber-200/80 rounded-xl p-3 text-xs text-amber-900 flex items-center justify-between gap-3 no-print max-w-[800px] w-full shadow-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-base">📄</span>
+              <span>
+                <strong>Multi-Page PDF Ready:</strong> Both Page 1 (Booking & Itinerary) and Page 2 (Terms, Inclusions & Policies) will be included when saving.
+              </span>
+            </div>
+            <span className="text-[11px] text-amber-800 bg-amber-200/60 font-bold px-2.5 py-1 rounded-lg whitespace-nowrap">
+              2 Pages
+            </span>
+          </div>
+
           <div 
             id="quotation-printable" 
             ref={printRef}
@@ -169,7 +405,7 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
               </div>
 
               {/* Booking Details Section */}
-              <div className="mt-8">
+              <div className="mt-8 avoid-break">
                 <h3 className="text-sm font-extrabold uppercase tracking-widest text-slate-900 pb-1.5 border-b-2 border-amber-600">
                   BOOKING DETAILS
                 </h3>
@@ -246,7 +482,7 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
               </div>
 
               {/* Additional Notes */}
-              <div className="mt-8">
+              <div className="mt-8 avoid-break">
                 <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">
                   ADDITIONAL NOTES
                 </h3>
@@ -273,7 +509,7 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
               </div>
 
               {/* General Terms & Conditions */}
-              <div>
+              <div className="avoid-break">
                 <h3 className="text-sm font-extrabold uppercase tracking-widest text-slate-900 pb-1.5 border-b-2 border-amber-600">
                   GENERAL TERMS & CONDITIONS
                 </h3>
@@ -288,7 +524,7 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
               </div>
 
               {/* Inclusions & Exclusions */}
-              <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 avoid-break">
                 
                 {/* Package Inclusions */}
                 <div className="border border-emerald-200 rounded-xl p-4 bg-emerald-50/40">
@@ -341,7 +577,7 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
               </div>
 
               {/* Payment Policy — Advance Payment */}
-              <div className="mt-8">
+              <div className="mt-8 avoid-break">
                 <h3 className="text-sm font-extrabold uppercase tracking-widest text-slate-900 pb-1.5 border-b-2 border-amber-600">
                   PAYMENT POLICY — ADVANCE PAYMENT
                 </h3>

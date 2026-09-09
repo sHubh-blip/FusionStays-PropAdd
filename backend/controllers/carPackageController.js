@@ -2,11 +2,16 @@ const express = require('express');
 const router = express.Router();
 const requireAuth = require('../middleware/auth');
 const cache = require('../services/cache');
+const { initializeCarSheets } = require('../services/carGoogleSheet');
 const {
   fetchCarMasterRecords,
   fetchCarDaywiseRecords,
+  fetchCarAccountsRecords,
+  updateCarAccountRecord,
+  syncAccountsFromMaster,
   CAR_MASTER_CACHE_KEY,
-  CAR_DAYWISE_CACHE_KEY
+  CAR_DAYWISE_CACHE_KEY,
+  CAR_ACCOUNTS_CACHE_KEY
 } = require('../services/carSheetService');
 
 // Clean helper
@@ -52,11 +57,35 @@ router.get('/car-packages/master', requireAuth, async (req, res) => {
       }
     }
 
+    // Lookup accounts by Vendorwise ID or Booking ID to enrich master records with payment status
+    let accountsRecords = cache.get(CAR_ACCOUNTS_CACHE_KEY);
+    if (!accountsRecords) {
+      accountsRecords = await fetchCarAccountsRecords();
+      cache.set(CAR_ACCOUNTS_CACHE_KEY, accountsRecords, 180);
+    }
+    const accountsByVendorId = {};
+    for (const a of accountsRecords) {
+      const vId = (a["Vendorwise ID"] || "").toLowerCase().trim();
+      if (vId && !accountsByVendorId[vId]) {
+        accountsByVendorId[vId] = a;
+      }
+    }
+
     let filtered = records.map(r => {
       const bId = (r["Booking ID"] || r["Vendorwise ID"] || "").toLowerCase().trim();
+      const vId = (r["Vendorwise ID"] || r["Booking ID"] || "").toLowerCase().trim();
+      const acc = accountsByVendorId[vId] || accountsByVendorId[bId] || {};
+
       return {
         ...r,
-        "Name": r["Name"] || nameByBookingId[bId] || ''
+        "Name": r["Name"] || nameByBookingId[bId] || '',
+        "Advance Status": acc["Advance Status"] || 'To be paid',
+        "Advance to be Paid": acc["Advance to be Paid"] || r["Advance Recieved"] || '0',
+        "Secondary Advance": acc["Secondary Advance"] || '',
+        "Secondary Advance Status": acc["Secondary Advance Status"] || 'To be paid',
+        "Guest Collection": acc["Guest Collection"] || r["Due Collection"] || '',
+        "Vendor": acc["Vendor"] || r["Vendor"] || '',
+        "Remarks": acc["Remarks"] || ''
       };
     });
 
@@ -296,8 +325,6 @@ router.get('/car-packages/booking/:bookingId', requireAuth, async (req, res) => 
     res.status(500).json({ message: "Failed to fetch car booking", error: err.message });
   }
 });
-
-const { initializeCarSheets } = require('../services/carGoogleSheet');
 
 // POST /api/car-packages/booking - Add new car booking + daywise itinerary rows directly from CRM into Google Sheets
 router.post('/car-packages/booking', requireAuth, async (req, res) => {
@@ -567,6 +594,299 @@ router.put('/car-packages/daywise/:id', requireAuth, async (req, res) => {
   } catch (err) {
     console.error("Failed to update car daywise entry:", err);
     res.status(500).json({ message: "Failed to update daywise entry", error: err.message });
+  }
+});
+
+// ==========================================
+// VENDOR ACCOUNTS ENDPOINTS
+// ==========================================
+
+// GET /api/car-packages/accounts - List all vendor account records
+router.get('/car-packages/accounts', requireAuth, async (req, res) => {
+  try {
+    const {
+      search,
+      status,
+      vendor,
+      carType,
+      month,
+      page = 1,
+      limit = 50,
+      paginate = 'true'
+    } = req.query;
+
+    let records = cache.get(CAR_ACCOUNTS_CACHE_KEY);
+    let fromCache = true;
+
+    if (!records) {
+      records = await fetchCarAccountsRecords();
+      cache.set(CAR_ACCOUNTS_CACHE_KEY, records, 180);
+      fromCache = false;
+    }
+
+    let filtered = [...records];
+
+    if (search) {
+      const q = search.toLowerCase();
+      filtered = filtered.filter(r =>
+        (r["Vendorwise ID"] || "").toLowerCase().includes(q) ||
+        (r["Guest Name"] || "").toLowerCase().includes(q) ||
+        (r["Vendor"] || "").toLowerCase().includes(q) ||
+        (r["Car Type"] || "").toLowerCase().includes(q) ||
+        (r["Remarks"] || "").toLowerCase().includes(q)
+      );
+    }
+
+    if (status && status !== 'all') {
+      filtered = filtered.filter(r =>
+        (r["Advance Status"] || "").toLowerCase() === status.toLowerCase() ||
+        (r["Secondary Advance Status"] || "").toLowerCase() === status.toLowerCase()
+      );
+    }
+
+    if (vendor && vendor !== 'all') {
+      filtered = filtered.filter(r =>
+        (r["Vendor"] || "").toLowerCase().includes(vendor.toLowerCase())
+      );
+    }
+
+    if (carType && carType !== 'all') {
+      filtered = filtered.filter(r =>
+        (r["Car Type"] || "").toLowerCase().includes(carType.toLowerCase())
+      );
+    }
+
+    if (month && month !== 'all') {
+      filtered = filtered.filter(r =>
+        (r["Date"] || "").toLowerCase().includes(month.toLowerCase())
+      );
+    }
+
+    // Aggregated financial metrics
+    const stats = filtered.reduce((acc, row) => {
+      const purchase = cleanNum(row["Purchase Price"]);
+      const advance = cleanNum(row["Advance to be Paid"]);
+      const secAdvance = cleanNum(row["Secondary Advance"]);
+      const guestCollection = cleanNum(row["Guest Collection"]);
+      const advStatus = (row["Advance Status"] || "").trim().toLowerCase();
+
+      acc.totalRecords += 1;
+      acc.totalPurchasePrice += purchase;
+      acc.totalAdvanceToBePaid += advance;
+      acc.totalSecondaryAdvance += secAdvance;
+      acc.totalGuestCollection += guestCollection;
+
+      if (advStatus === 'paid' || advStatus === 'vendor confirmed') {
+        acc.totalPaid += advance;
+      } else if (advStatus === 'to be paid' || !advStatus) {
+        acc.totalPending += advance;
+      }
+
+      if (advStatus === 'to be paid') acc.statusCounts.toBePaid += 1;
+      else if (advStatus === 'paid') acc.statusCounts.paid += 1;
+      else if (advStatus === 'vendor confirmed') acc.statusCounts.vendorConfirmed += 1;
+      else if (advStatus === 'cancelled') acc.statusCounts.cancelled += 1;
+
+      return acc;
+    }, {
+      totalRecords: 0,
+      totalPurchasePrice: 0,
+      totalAdvanceToBePaid: 0,
+      totalSecondaryAdvance: 0,
+      totalPaid: 0,
+      totalPending: 0,
+      totalGuestCollection: 0,
+      statusCounts: {
+        toBePaid: 0,
+        paid: 0,
+        vendorConfirmed: 0,
+        cancelled: 0
+      }
+    });
+
+    const total = filtered.length;
+    const totalPages = Math.ceil(total / Number(limit));
+    const offset = (Number(page) - 1) * Number(limit);
+
+    const paginated = paginate === 'false'
+      ? filtered
+      : filtered.slice(offset, offset + Number(limit));
+
+    // Filter dropdown options
+    const uniqueVendors = [...new Set(records.map(r => r.Vendor).filter(Boolean))].sort();
+    const uniqueCarTypes = [...new Set(records.map(r => r["Car Type"]).filter(Boolean))].sort();
+    const statuses = ['To be paid', 'Paid', 'Vendor Confirmed', 'Cancelled'];
+
+    res.setHeader('X-Data-Source', fromCache ? 'cache' : 'sheets');
+    res.json({
+      data: paginated,
+      stats,
+      meta: {
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages
+      },
+      filters: {
+        vendors: uniqueVendors,
+        carTypes: uniqueCarTypes,
+        statuses
+      },
+      source: fromCache ? 'cache' : 'sheets'
+    });
+  } catch (err) {
+    console.error("Failed to fetch car accounts records:", err);
+    res.status(500).json({ message: "Failed to fetch accounts records", error: err.message });
+  }
+});
+
+// GET /api/car-packages/accounts/:id - Get single account by Vendorwise ID or row index
+router.get('/car-packages/accounts/:id', requireAuth, async (req, res) => {
+  try {
+    const id = req.params.id.trim().toLowerCase();
+    let records = cache.get(CAR_ACCOUNTS_CACHE_KEY);
+    if (!records) {
+      records = await fetchCarAccountsRecords();
+      cache.set(CAR_ACCOUNTS_CACHE_KEY, records, 180);
+    }
+
+    let account = records.find(r => 
+      (r["Vendorwise ID"] || "").trim().toLowerCase() === id ||
+      r._rowIndex?.toString() === id
+    );
+
+    // If not in Accounts, fallback to master
+    if (!account) {
+      let masterRecords = cache.get(CAR_MASTER_CACHE_KEY) || await fetchCarMasterRecords();
+      const master = masterRecords.find(m => 
+        (m["Vendorwise ID"] || "").trim().toLowerCase() === id ||
+        (m["Booking ID"] || "").trim().toLowerCase() === id
+      );
+
+      if (master) {
+        account = {
+          "Vendorwise ID": master["Vendorwise ID"] || id.toUpperCase(),
+          "Guest Name": master["Guest Name"] || '',
+          "Date": master["Start Date"] || master["Booking Date"] || '',
+          "Car Type": '',
+          "Purchase Price": master["Purchase Cost"] || '0',
+          "Advance to be Paid": master["Advance Recieved"] || '0',
+          "Advance Status": 'To be paid',
+          "Secondary Advance": '',
+          "Secondary Advance Status": 'To be paid',
+          "Guest Collection": master["Due Collection"] || '',
+          "Vendor": master["Vendor"] || '',
+          "Remarks": ''
+        };
+      }
+    }
+
+    if (!account) {
+      return res.status(404).json({ message: "Account record not found" });
+    }
+
+    res.json({ account });
+  } catch (err) {
+    console.error("Failed to fetch account detail:", err);
+    res.status(500).json({ message: "Failed to fetch account detail", error: err.message });
+  }
+});
+
+// PUT /api/car-packages/accounts/:id - Edit an existing account entry
+router.put('/car-packages/accounts/:id', requireAuth, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const updates = req.body;
+
+    const result = await updateCarAccountRecord(id, updates);
+    cache.del(CAR_ACCOUNTS_CACHE_KEY);
+    cache.del(CAR_MASTER_CACHE_KEY);
+
+    res.json({
+      success: true,
+      message: 'Vendor account updated successfully in Google Sheet',
+      result
+    });
+  } catch (err) {
+    console.error("Failed to update car account record:", err);
+    res.status(500).json({ message: "Failed to update account record", error: err.message });
+  }
+});
+
+// PATCH /api/car-packages/accounts/:id/status - Quick status update
+router.patch('/car-packages/accounts/:id/status', requireAuth, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { status, field = 'advance' } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ message: "Status value is required" });
+    }
+
+    const updates = {};
+    if (field === 'secondary') {
+      updates["Secondary Advance Status"] = status;
+    } else {
+      updates["Advance Status"] = status;
+    }
+
+    await updateCarAccountRecord(id, updates);
+    cache.del(CAR_ACCOUNTS_CACHE_KEY);
+    cache.del(CAR_MASTER_CACHE_KEY);
+
+    res.json({
+      success: true,
+      message: `Payment status updated to ${status}`,
+      status
+    });
+  } catch (err) {
+    console.error("Failed to update payment status:", err);
+    res.status(500).json({ message: "Failed to update payment status", error: err.message });
+  }
+});
+
+// POST /api/car-packages/accounts - Create a manual account entry
+router.post('/car-packages/accounts', requireAuth, async (req, res) => {
+  try {
+    const data = req.body;
+    if (!data["Vendorwise ID"] && !data["Guest Name"]) {
+      return res.status(400).json({ message: "Vendorwise ID or Guest Name is required" });
+    }
+
+    await updateCarAccountRecord(data["Vendorwise ID"] || Date.now().toString(), data);
+    cache.del(CAR_ACCOUNTS_CACHE_KEY);
+    cache.del(CAR_MASTER_CACHE_KEY);
+
+    res.status(201).json({
+      success: true,
+      message: "Vendor account record saved to Google Sheet successfully!"
+    });
+  } catch (err) {
+    console.error("Failed to create vendor account record:", err);
+    res.status(500).json({ message: "Failed to create account record", error: err.message });
+  }
+});
+
+// POST /api/car-packages/accounts/sync - Force sync from Master to Accounts
+router.post('/car-packages/accounts/sync', requireAuth, async (req, res) => {
+  try {
+    cache.del(CAR_ACCOUNTS_CACHE_KEY);
+    cache.del(CAR_MASTER_CACHE_KEY);
+
+    const doc = await initializeCarSheets();
+    const count = await syncAccountsFromMaster(doc);
+    const refreshed = await fetchCarAccountsRecords();
+    cache.set(CAR_ACCOUNTS_CACHE_KEY, refreshed, 180);
+
+    res.json({
+      success: true,
+      message: "Vendor accounts synchronized with Master successfully",
+      syncedCount: count,
+      totalCount: refreshed.length
+    });
+  } catch (err) {
+    console.error("Failed to sync accounts from master:", err);
+    res.status(500).json({ message: "Failed to sync accounts", error: err.message });
   }
 });
 

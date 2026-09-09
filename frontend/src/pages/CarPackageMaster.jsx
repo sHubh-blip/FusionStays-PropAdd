@@ -6,10 +6,11 @@ import CarQuotationPDFModal from '../components/CarQuotationPDFModal';
 import CarBookingModal from '../components/CarBookingModal';
 import CarMasterEditModal from '../components/CarMasterEditModal';
 import CarBookingDaywisePreviewModal from '../components/CarBookingDaywisePreviewModal';
+import CarPaymentStatusModal from '../components/CarPaymentStatusModal';
 import { 
   Car, Search, RefreshCw, MessageSquare, FileText, Calendar, 
   TrendingUp, DollarSign, CheckCircle2, ChevronRight, User, Phone, 
-  MapPin, ShieldCheck, ArrowUpDown, Filter, Plus, Edit, Eye, Clock, AlertCircle
+  MapPin, ShieldCheck, ArrowUpDown, Filter, Plus, Edit, Eye, Clock, AlertCircle, CreditCard
 } from 'lucide-react';
 
 const CarPackageMaster = () => {
@@ -39,6 +40,7 @@ const CarPackageMaster = () => {
   const [selectedBookingForPreview, setSelectedBookingForPreview] = useState(null);
   const [selectedBookingForMsg, setSelectedBookingForMsg] = useState(null);
   const [selectedBookingForPDF, setSelectedBookingForPDF] = useState(null);
+  const [selectedBookingForPayment, setSelectedBookingForPayment] = useState(null);
   const [daywiseData, setDaywiseData] = useState([]);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
@@ -608,7 +610,7 @@ const CarPackageMaster = () => {
                             </span>
                           </td>
 
-                          {/* Advance / Due */}
+                          {/* Advance / Due & Payment Status */}
                           <td className="py-3.5 px-4">
                             <div className="font-bold text-emerald-700">
                               Adv: ₹{r["Advance Recieved"]}
@@ -616,12 +618,33 @@ const CarPackageMaster = () => {
                             <div className="text-[10px] font-semibold text-slate-500 mt-0.5">
                               {r["Due Collection"]}
                             </div>
+                            {r["Advance Status"] && (
+                              <div className="mt-1">
+                                <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                  r["Advance Status"] === 'Paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                  r["Advance Status"] === 'Vendor Confirmed' ? 'bg-teal-900 text-white border-teal-950' :
+                                  r["Advance Status"] === 'Cancelled' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                                  'bg-amber-50 text-amber-700 border-amber-200'
+                                }`}>
+                                  {r["Advance Status"]}
+                                </span>
+                              </div>
+                            )}
                           </td>
 
                           {/* Quick Generator & Edit Actions */}
                           <td className="py-3.5 px-4 text-center">
                             <div className="flex items-center justify-center gap-1.5">
                               
+                              {/* Vendor Payment & Accounts Button */}
+                              <button
+                                onClick={() => setSelectedBookingForPayment(r)}
+                                title="See / Add / Edit Vendor Payment Status & Ledger"
+                                className="p-2 bg-emerald-100/80 hover:bg-emerald-200 text-emerald-800 rounded-xl transition-all shadow-xs active:scale-95 border border-emerald-300/80"
+                              >
+                                <CreditCard className="w-4 h-4" />
+                              </button>
+
                               {/* Daywise Itinerary Preview Button */}
                               <button
                                 onClick={() => handleOpenPreviewModal(r)}
@@ -719,6 +742,15 @@ const CarPackageMaster = () => {
           booking={selectedBookingForPDF}
           daywise={daywiseData}
           onClose={() => setSelectedBookingForPDF(null)}
+        />
+      )}
+
+      {/* Vendor Payment & Accounts Modal */}
+      {selectedBookingForPayment && (
+        <CarPaymentStatusModal
+          booking={selectedBookingForPayment}
+          onClose={() => setSelectedBookingForPayment(null)}
+          onSuccess={() => fetchMasterRecords()}
         />
       )}
 

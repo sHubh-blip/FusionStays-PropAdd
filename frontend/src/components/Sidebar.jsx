@@ -4,7 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import { 
   BarChart, Layers, MapPin, Plus, Search, ChevronDown, ChevronRight, 
   Users, TrendingUp, Calendar, LayoutDashboard, Database, ClipboardList, Settings,
-  FileText, LogOut, Shield, X
+  FileText, LogOut, Shield, X, WalletCards
 } from 'lucide-react';
 import EODGeneratorModal from './EODGeneratorModal';
 
@@ -169,6 +169,15 @@ const Sidebar = ({
                     >
                       <Calendar className={`w-5 h-5 mr-3 ${isActive('/car-packages/daywise') ? 'text-brand-500' : 'text-slate-400'}`} />
                       Daywise Operations
+                    </button>
+                  </li>
+                  <li>
+                    <button 
+                      onClick={() => { navigate('/car-packages/accounts'); if (onClose) onClose(); }}
+                      className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all ${isActive('/car-packages/accounts') ? 'bg-brand-50 text-brand-700 font-bold shadow-sm border border-brand-100' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'}`}
+                    >
+                      <WalletCards className={`w-5 h-5 mr-3 ${isActive('/car-packages/accounts') ? 'text-brand-500' : 'text-slate-400'}`} />
+                      Vendor Accounts
                     </button>
                   </li>
                 </ul>

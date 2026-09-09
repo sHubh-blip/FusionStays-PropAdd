@@ -9,7 +9,7 @@ import DropdownManager from './pages/DropdownManager';
 import UserManagement from './pages/UserManagement';
 import CarPackageMaster from './pages/CarPackageMaster';
 import CarPackageDaywise from './pages/CarPackageDaywise';
-
+import CarPackageAccounts from './pages/CarPackageAccounts';
 
 import SetNewPassword from './pages/SetNewPassword';
 
@@ -110,6 +110,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['admin', 'ops']}>
                 <CarPackageDaywise />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/car-packages/accounts"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'ops']}>
+                <CarPackageAccounts />
               </ProtectedRoute>
             }
           />
