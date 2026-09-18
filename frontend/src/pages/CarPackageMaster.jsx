@@ -3,6 +3,7 @@ import api from '../api';
 import Sidebar from '../components/Sidebar';
 import CarWhatsAppMessageModal from '../components/CarWhatsAppMessageModal';
 import CarQuotationPDFModal from '../components/CarQuotationPDFModal';
+import CarVoucherPDFModal from '../components/CarVoucherPDFModal';
 import CarBookingModal from '../components/CarBookingModal';
 import CarMasterEditModal from '../components/CarMasterEditModal';
 import CarBookingDaywisePreviewModal from '../components/CarBookingDaywisePreviewModal';
@@ -10,7 +11,7 @@ import CarPaymentStatusModal from '../components/CarPaymentStatusModal';
 import { 
   Car, Search, RefreshCw, MessageSquare, FileText, Calendar, 
   TrendingUp, DollarSign, CheckCircle2, ChevronRight, User, Phone, 
-  MapPin, ShieldCheck, ArrowUpDown, Filter, Plus, Edit, Eye, Clock, AlertCircle, CreditCard
+  MapPin, ShieldCheck, ArrowUpDown, Filter, Plus, Edit, Eye, Clock, AlertCircle, CreditCard, Receipt
 } from 'lucide-react';
 
 const CarPackageMaster = () => {
@@ -40,6 +41,7 @@ const CarPackageMaster = () => {
   const [selectedBookingForPreview, setSelectedBookingForPreview] = useState(null);
   const [selectedBookingForMsg, setSelectedBookingForMsg] = useState(null);
   const [selectedBookingForPDF, setSelectedBookingForPDF] = useState(null);
+  const [selectedBookingForVoucher, setSelectedBookingForVoucher] = useState(null);
   const [selectedBookingForPayment, setSelectedBookingForPayment] = useState(null);
   const [daywiseData, setDaywiseData] = useState([]);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
@@ -98,6 +100,20 @@ const CarPackageMaster = () => {
 
   const handleOpenPDFModal = async (booking) => {
     setSelectedBookingForPDF(booking);
+    setIsLoadingDetails(true);
+    try {
+      const res = await api.get(`/car-packages/booking/${encodeURIComponent(booking["Booking ID"] || booking["Vendorwise ID"])}`);
+      setDaywiseData(res.data.daywise || []);
+    } catch (err) {
+      console.error("Failed to fetch booking daywise details:", err);
+      setDaywiseData([]);
+    } finally {
+      setIsLoadingDetails(false);
+    }
+  };
+
+  const handleOpenVoucherModal = async (booking) => {
+    setSelectedBookingForVoucher(booking);
     setIsLoadingDetails(true);
     try {
       const res = await api.get(`/car-packages/booking/${encodeURIComponent(booking["Booking ID"] || booking["Vendorwise ID"])}`);
@@ -186,7 +202,7 @@ const CarPackageMaster = () => {
       <main className="flex-1 flex flex-col min-w-0 overflow-y-auto custom-scrollbar">
         
         {/* Top Sticky Header */}
-        <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+        <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 py-3 sm:px-6 sm:py-4 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 shadow-sm">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsSidebarOpen(prev => !prev)}
@@ -201,48 +217,48 @@ const CarPackageMaster = () => {
               </div>
             </button>
             <div>
-              <div className="flex items-center gap-2 text-xs font-bold text-brand-600 uppercase tracking-wider mb-1">
+              <div className="flex items-center gap-2 text-xs font-bold text-brand-600 uppercase tracking-wider mb-0.5 sm:mb-1">
                 <Car className="w-4 h-4" />
                 Car Package Module
               </div>
-              <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
+              <h1 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">
                 Car Package Master
               </h1>
-              <p className="text-xs text-slate-500 font-medium">
+              <p className="text-[11px] sm:text-xs text-slate-500 font-medium">
                 Manage booking master records, sales margins, quotations, and client dispatches.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-xs shadow-md shadow-brand-600/20 transition-all active:scale-95"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-xs shadow-md shadow-brand-600/20 transition-all active:scale-95"
             >
               <Plus className="w-4 h-4" />
-              New Car Booking
+              <span>New Car Booking</span>
             </button>
 
             <button
               onClick={handleSync}
               disabled={isSyncing}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 ${
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 ${
                 isSyncing 
                   ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
                   : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-slate-300'
               }`}
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-brand-600' : 'text-slate-500'}`} />
-              {isSyncing ? 'Syncing...' : 'Sync Sheet'}
+              <span>{isSyncing ? 'Syncing...' : 'Sync Sheet'}</span>
             </button>
           </div>
         </header>
 
 
-        <div className="p-6 space-y-6">
+        <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
           
           {/* KPI Analytics Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
             
             {/* Total Bookings */}
             <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
@@ -453,9 +469,15 @@ const CarPackageMaster = () => {
           </div>
 
           {/* Master Table */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
+          <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            {/* Mobile swipe helper */}
+            <div className="md:hidden px-3.5 py-2 bg-slate-50 border-b border-slate-200 text-[11px] text-slate-500 flex items-center justify-between font-medium">
+              <span>👉 Swipe table horizontally to view columns & actions</span>
+              <span className="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-bold">11 cols</span>
+            </div>
+
+            <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left text-xs border-collapse min-w-[920px]">
                 <thead>
                   <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                     <th className="py-3.5 px-4">Handled By</th>
@@ -681,6 +703,15 @@ const CarPackageMaster = () => {
                                 <FileText className="w-4 h-4" />
                               </button>
 
+                              {/* Final Bill / Voucher PDF Button */}
+                              <button
+                                onClick={() => handleOpenVoucherModal(r)}
+                                title="Generate Final Bill / Voucher PDF"
+                                className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl transition-all shadow-xs active:scale-95"
+                              >
+                                <Receipt className="w-4 h-4" />
+                              </button>
+
                             </div>
                           </td>
 
@@ -742,6 +773,15 @@ const CarPackageMaster = () => {
           booking={selectedBookingForPDF}
           daywise={daywiseData}
           onClose={() => setSelectedBookingForPDF(null)}
+        />
+      )}
+
+      {/* Final Bill / Voucher PDF Modal */}
+      {selectedBookingForVoucher && (
+        <CarVoucherPDFModal
+          booking={selectedBookingForVoucher}
+          daywise={daywiseData}
+          onClose={() => setSelectedBookingForVoucher(null)}
         />
       )}
 

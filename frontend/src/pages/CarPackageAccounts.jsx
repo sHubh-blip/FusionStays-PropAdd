@@ -144,40 +144,50 @@ const CarPackageAccounts = () => {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
-        
-        {/* Top Header */}
-        <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm z-10">
+           {/* Top Header */}
+        <header className="bg-white border-b border-slate-200 px-4 py-3 sm:px-6 sm:py-4 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 shadow-sm z-10">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-brand-500/10 text-brand-600 rounded-xl border border-brand-500/20">
-              <WalletCards className="w-6 h-6" />
+            <button
+              onClick={() => setIsSidebarOpen(prev => !prev)}
+              className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all shadow-sm active:scale-95"
+              title="Toggle Navigation Menu"
+            >
+              <div className="flex flex-col gap-1 w-5">
+                <span className="h-0.5 w-full bg-slate-700 rounded-full"></span>
+                <span className="h-0.5 w-4 bg-slate-700 rounded-full"></span>
+                <span className="h-0.5 w-full bg-slate-700 rounded-full"></span>
+              </div>
+            </button>
+            <div className="p-2 sm:p-2.5 bg-brand-500/10 text-brand-600 rounded-xl border border-brand-500/20">
+              <WalletCards className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-black tracking-tight text-slate-900">Vendor Accounts & Payments</h1>
-                <span className="bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-200">
-                  Google Sheet Synced
+                <h1 className="text-lg sm:text-xl font-black tracking-tight text-slate-900">Vendor Accounts & Payments</h1>
+                <span className="bg-emerald-100 text-emerald-800 text-[10px] sm:text-[11px] font-bold px-2 sm:px-2.5 py-0.5 rounded-full border border-emerald-200 whitespace-nowrap">
+                  Sheet Synced
                 </span>
               </div>
-              <p className="text-xs text-slate-500 font-medium">
+              <p className="text-[11px] sm:text-xs text-slate-500 font-medium">
                 Manage vendor purchase costs, advance payments, due collections & payment statuses
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
             <button
               onClick={handleSync}
               disabled={isSyncing}
-              className="flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl border border-slate-300 shadow-sm transition-all active:scale-95 disabled:opacity-50"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl border border-slate-300 shadow-sm transition-all active:scale-95 disabled:opacity-50"
               title="Sync newly created bookings from Master into Accounts"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-brand-600' : ''}`} />
-              <span>{isSyncing ? 'Syncing...' : 'Sync with Master'}</span>
+              <span>{isSyncing ? 'Syncing...' : 'Sync Master'}</span>
             </button>
 
             <button
               onClick={() => setSelectedBookingForEdit({})}
-              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-sm transition-all active:scale-95"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-sm transition-all active:scale-95 whitespace-nowrap"
             >
               <Plus className="w-4 h-4" />
               <span>Add Account Row</span>
@@ -186,67 +196,65 @@ const CarPackageAccounts = () => {
         </header>
 
         {/* Scrollable Body */}
-        <main className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 sm:space-y-6 custom-scrollbar">
           
           {/* KPI Stat Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Purchase</span>
-              <p className="text-lg font-black text-slate-900 mt-1">{formatRupee(stats.totalPurchasePrice)}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3.5">
+            <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm">
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Purchase</span>
+              <p className="text-base sm:text-lg font-black text-slate-900 mt-1">{formatRupee(stats.totalPurchasePrice)}</p>
               <span className="text-[10px] text-slate-500 font-medium">{stats.totalRecords} total bookings</span>
             </div>
 
-            <div className="bg-white p-4 rounded-2xl border border-amber-200 bg-amber-50/20 shadow-sm">
-              <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">Advance To Be Paid</span>
-              <p className="text-lg font-black text-amber-800 mt-1">{formatRupee(stats.totalAdvanceToBePaid)}</p>
-              <span className="text-[10px] text-amber-600 font-semibold">{stats.statusCounts.toBePaid} pending bookings</span>
+            <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-amber-200 bg-amber-50/20 shadow-sm">
+              <span className="text-[10px] sm:text-[11px] font-bold text-amber-700 uppercase tracking-wider">Advance To Be Paid</span>
+              <p className="text-base sm:text-lg font-black text-amber-800 mt-1">{formatRupee(stats.totalAdvanceToBePaid)}</p>
+              <span className="text-[10px] text-amber-600 font-semibold">{stats.statusCounts.toBePaid} pending</span>
             </div>
 
-            <div className="bg-white p-4 rounded-2xl border border-emerald-200 bg-emerald-50/20 shadow-sm">
-              <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">Advance Paid</span>
-              <p className="text-lg font-black text-emerald-800 mt-1">{formatRupee(stats.totalPaid)}</p>
-              <span className="text-[10px] text-emerald-600 font-semibold">{stats.statusCounts.paid} settled trips</span>
+            <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-emerald-200 bg-emerald-50/20 shadow-sm">
+              <span className="text-[10px] sm:text-[11px] font-bold text-emerald-700 uppercase tracking-wider">Advance Paid</span>
+              <p className="text-base sm:text-lg font-black text-emerald-800 mt-1">{formatRupee(stats.totalPaid)}</p>
+              <span className="text-[10px] text-emerald-600 font-semibold">{stats.statusCounts.paid} settled</span>
             </div>
 
-            <div className="bg-white p-4 rounded-2xl border border-teal-200 bg-teal-50/30 shadow-sm">
-              <span className="text-[11px] font-bold text-teal-800 uppercase tracking-wider">Vendor Confirmed</span>
-              <p className="text-lg font-black text-teal-900 mt-1">{stats.statusCounts.vendorConfirmed}</p>
+            <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-teal-200 bg-teal-50/30 shadow-sm">
+              <span className="text-[10px] sm:text-[11px] font-bold text-teal-800 uppercase tracking-wider">Vendor Confirmed</span>
+              <p className="text-base sm:text-lg font-black text-teal-900 mt-1">{stats.statusCounts.vendorConfirmed}</p>
               <span className="text-[10px] text-teal-700 font-medium">Verified by vendor</span>
             </div>
 
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Guest Collections</span>
-              <p className="text-lg font-black text-slate-800 mt-1">{formatRupee(stats.totalGuestCollection)}</p>
+            <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm">
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider">Guest Collections</span>
+              <p className="text-base sm:text-lg font-black text-slate-800 mt-1">{formatRupee(stats.totalGuestCollection)}</p>
               <span className="text-[10px] text-slate-400 font-medium">Collected on-site</span>
             </div>
 
-            <div className="bg-white p-4 rounded-2xl border border-rose-200 bg-rose-50/20 shadow-sm">
-              <span className="text-[11px] font-bold text-rose-700 uppercase tracking-wider">Cancelled</span>
-              <p className="text-lg font-black text-rose-800 mt-1">{stats.statusCounts.cancelled}</p>
-              <span className="text-[10px] text-rose-600 font-medium">Void bookings</span>
+            <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-rose-200 bg-rose-50/20 shadow-sm">
+              <span className="text-[10px] sm:text-[11px] font-bold text-rose-700 uppercase tracking-wider">Cancelled</span>
+              <p className="text-base sm:text-lg font-black text-rose-800 mt-1">{stats.statusCounts.cancelled}</p>
+              <span className="text-[10px] text-rose-600 font-semibold">Cancelled bookings</span>
             </div>
           </div>
 
-          {/* Filters Bar */}
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[280px]">
-              {/* Search */}
-              <div className="relative flex-1 min-w-[220px]">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  placeholder="Search Vendorwise ID, guest, vendor, car..."
-                  className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
-                />
-              </div>
+          {/* Filter and Search Bar */}
+          <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
+            <div className="relative w-full md:w-80">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search vendor, guest name, vendorwise ID..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all font-medium"
+              />
+            </div>
 
-              {/* Status Filter */}
+            <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1.5 md:pb-0 custom-scrollbar">
               <select
                 value={statusFilter}
-                onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-                className="px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white font-medium text-slate-700 focus:ring-2 focus:ring-brand-500"
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer"
               >
                 <option value="all">All Payment Statuses</option>
                 {filterOptions.statuses.map(st => (
@@ -254,17 +262,29 @@ const CarPackageAccounts = () => {
                 ))}
               </select>
 
-              {/* Vendor Filter */}
               <select
                 value={vendorFilter}
-                onChange={(e) => { setVendorFilter(e.target.value); setPage(1); }}
-                className="px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white font-medium text-slate-700 focus:ring-2 focus:ring-brand-500 max-w-[200px]"
+                onChange={(e) => setVendorFilter(e.target.value)}
+                className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer"
               >
                 <option value="all">All Vendors</option>
                 {filterOptions.vendors.map(v => (
                   <option key={v} value={v}>{v}</option>
                 ))}
               </select>
+
+              {(statusFilter !== 'all' || vendorFilter !== 'all' || search) && (
+                <button
+                  onClick={() => {
+                    setStatusFilter('all');
+                    setVendorFilter('all');
+                    setSearch('');
+                  }}
+                  className="px-2.5 py-1.5 text-xs text-rose-600 hover:text-rose-700 font-bold hover:bg-rose-50 rounded-xl transition-all"
+                >
+                  Reset
+                </button>
+              )}
             </div>
 
             <div className="text-xs text-slate-500 font-semibold">
@@ -273,9 +293,15 @@ const CarPackageAccounts = () => {
           </div>
 
           {/* Accounts Data Table */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            {/* Mobile swipe helper */}
+            <div className="md:hidden px-3.5 py-2 bg-slate-50 border-b border-slate-200 text-[11px] text-slate-500 flex items-center justify-between font-medium">
+              <span>👉 Swipe table horizontally to view all ledger columns</span>
+              <span className="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-bold">12 cols</span>
+            </div>
+
             <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full text-left border-collapse text-xs">
+              <table className="w-full text-left border-collapse text-xs min-w-[980px]">
                 <thead>
                   <tr className="bg-slate-900 text-white font-bold tracking-wider text-[11px] uppercase border-b border-slate-800">
                     <th className="px-4 py-3.5 whitespace-nowrap">Vendorwise ID</th>

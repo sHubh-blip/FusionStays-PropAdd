@@ -1,9 +1,18 @@
 import React, { useRef, useState } from 'react';
-import { X, Printer, Download, CheckCircle2, XCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import { X, Printer, Download, CheckCircle2, XCircle, AlertTriangle, Loader2, Edit3, Check, RotateCcw } from 'lucide-react';
+
+const DEFAULT_ADDITIONAL_NOTES = `Note: Permit, parking, Toll taxes, and any entry fees are not included.
+In case there is car scarcity due to festive peak/Dusshera, additional charges up to Rs.4000 can be charged for that specific day.`;
 
 const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
   const printRef = useRef();
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Editable Additional Notes state
+  const [notesText, setNotesText] = useState(
+    booking?.["Additional Notes"] || booking?.["Notes"] || DEFAULT_ADDITIONAL_NOTES
+  );
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
 
   // Extract variables
   const guestName = booking?.["Guest Name"] || daywise[0]?.["Guest Name"] || "Guest";
@@ -36,6 +45,15 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
   const quotationDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
   const handlePrint = () => {
+    if (isEditingNotes) {
+      setIsEditingNotes(false);
+      setTimeout(executePrint, 60);
+    } else {
+      executePrint();
+    }
+  };
+
+  const executePrint = () => {
     const printableEl = printRef.current;
     if (!printableEl) return;
 
@@ -192,7 +210,7 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
   };
 
   return (
-    <div className="pdf-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in overflow-y-auto">
+    <div className="pdf-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in overflow-y-auto">
       
       {/* Print stylesheet override for multipage printing fallback */}
       <style id="modal-main-print-override">{`
@@ -294,43 +312,44 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
         }
       `}</style>
 
-      <div className="pdf-modal-dialog bg-slate-100 w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 flex flex-col max-h-[92vh] overflow-hidden">
+      <div className="pdf-modal-dialog bg-slate-100 w-full max-w-4xl rounded-xl sm:rounded-2xl shadow-2xl border border-slate-200 flex flex-col max-h-[96vh] sm:max-h-[92vh] overflow-hidden">
         
         {/* Modal Top Bar */}
-        <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between no-print">
+        <div className="px-4 py-3 sm:px-6 sm:py-4 bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 no-print">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-brand-500/20 text-brand-400 rounded-xl">
+            <div className="p-2 sm:p-2.5 bg-brand-500/20 text-brand-400 rounded-xl">
               <Printer className="w-5 h-5 text-amber-400" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-lg text-white">Car Booking Quotation PDF</h3>
+                <h3 className="font-bold text-base sm:text-lg text-white">Car Booking Quotation PDF</h3>
                 <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                  All 2 Pages
+                  2 Pages
                 </span>
               </div>
-              <p className="text-xs text-slate-400">
-                {guestName} • Booking ID: {booking?.["Booking ID"] || booking?.["Vendorwise ID"] || "N/A"}
+              <p className="text-[11px] sm:text-xs text-slate-400 truncate max-w-[280px] sm:max-w-md">
+                {guestName} • ID: {booking?.["Booking ID"] || booking?.["Vendorwise ID"] || "N/A"}
               </p>
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto">
             <button
               onClick={handlePrint}
               disabled={isGenerating}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-xs font-bold rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-xs font-bold rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
               title="Download all pages as PDF by selecting 'Save as PDF' in the destination dropdown"
             >
               {isGenerating ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Preparing PDF...
+                  <span>Preparing PDF...</span>
                 </>
               ) : (
                 <>
                   <Download className="w-4 h-4" />
-                  Download / Save PDF (All Pages)
+                  <span className="hidden sm:inline">Download / Save PDF (All Pages)</span>
+                  <span className="sm:hidden">Download PDF</span>
                 </>
               )}
             </button>
@@ -344,17 +363,17 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
         </div>
 
         {/* Printable Document Container */}
-        <div className="pdf-modal-content p-6 md:p-10 overflow-y-auto flex-1 bg-slate-200/80 custom-scrollbar flex flex-col items-center">
+        <div className="pdf-modal-content p-2 sm:p-6 md:p-10 overflow-y-auto overflow-x-auto flex-1 bg-slate-200/80 custom-scrollbar flex flex-col items-center w-full">
           
           {/* Download helper banner */}
-          <div className="mb-4 bg-amber-50 border border-amber-200/80 rounded-xl p-3 text-xs text-amber-900 flex items-center justify-between gap-3 no-print max-w-[800px] w-full shadow-sm">
+          <div className="mb-4 bg-amber-50 border border-amber-200/80 rounded-xl p-2.5 sm:p-3 text-xs text-amber-900 flex items-center justify-between gap-2 sm:gap-3 no-print max-w-[800px] w-full shadow-sm">
             <div className="flex items-center gap-2">
-              <span className="text-base">📄</span>
-              <span>
-                <strong>Multi-Page PDF Ready:</strong> Both Page 1 (Booking & Itinerary) and Page 2 (Terms, Inclusions & Policies) will be included when saving.
+              <span className="text-sm sm:text-base">📄</span>
+              <span className="text-[11px] sm:text-xs">
+                <strong>Multi-Page PDF Ready:</strong> Page 1 (Booking & Itinerary) & Page 2 (Terms & Policies).
               </span>
             </div>
-            <span className="text-[11px] text-amber-800 bg-amber-200/60 font-bold px-2.5 py-1 rounded-lg whitespace-nowrap">
+            <span className="text-[10px] sm:text-[11px] text-amber-800 bg-amber-200/60 font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg whitespace-nowrap">
               2 Pages
             </span>
           </div>
@@ -362,7 +381,7 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
           <div 
             id="quotation-printable" 
             ref={printRef}
-            className="w-full max-w-[800px] bg-white shadow-xl rounded-xl p-8 md:p-12 text-slate-800 font-sans space-y-8"
+            className="w-full max-w-[800px] min-w-[320px] sm:min-w-0 bg-white shadow-xl rounded-xl p-4 sm:p-8 md:p-12 text-slate-800 font-sans space-y-6 sm:space-y-8"
           >
             
             {/* ====== PAGE 1 ====== */}
@@ -482,13 +501,85 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
               </div>
 
               {/* Additional Notes */}
-              <div className="mt-8 avoid-break">
-                <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">
-                  ADDITIONAL NOTES
-                </h3>
-                <div className="mt-2 text-[11px] text-slate-600 font-medium space-y-1">
-                  <p>• Note: Permit, parking, Toll taxes, and any entry fees are not included.</p>
-                  <p>• In case there is car scarcity due to festive peak/Dusshera, additional charges up to Rs.4000 can be charged for that specific day.</p>
+              <div className="mt-8 avoid-break group">
+                <div className="flex items-center justify-between pb-1">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">
+                    ADDITIONAL NOTES
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingNotes(prev => !prev)}
+                    className="no-print flex items-center gap-1.5 text-[11px] font-bold text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 px-2.5 py-1 rounded-lg transition-all cursor-pointer shadow-2xs active:scale-95"
+                    title={isEditingNotes ? "Finish editing notes" : "Click to edit additional notes"}
+                  >
+                    {isEditingNotes ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Done Editing</span>
+                      </>
+                    ) : (
+                      <>
+                        <Edit3 className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Edit Notes</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {isEditingNotes && (
+                  <div className="mt-2 mb-3 p-3 bg-amber-50/70 border-2 border-amber-300 rounded-xl space-y-2 no-print">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-bold text-amber-900">
+                        Customize Notes (Each line will become a bullet point on the PDF):
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setNotesText(DEFAULT_ADDITIONAL_NOTES)}
+                        className="flex items-center gap-1 text-[10px] font-semibold text-slate-500 hover:text-amber-800 underline cursor-pointer"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        Reset Default
+                      </button>
+                    </div>
+
+                    <textarea
+                      value={notesText}
+                      onChange={(e) => setNotesText(e.target.value)}
+                      rows={4}
+                      placeholder="Enter notes (each line will be a separate bullet point)..."
+                      className="w-full text-xs p-2.5 border border-amber-300 rounded-lg bg-white text-slate-800 font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none leading-relaxed"
+                    />
+
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingNotes(false)}
+                        className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg transition-all shadow-xs cursor-pointer flex items-center gap-1"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        Apply & Save
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div 
+                  onClick={() => !isEditingNotes && setIsEditingNotes(true)}
+                  className={`mt-2 text-[11px] text-slate-600 font-medium space-y-1 rounded-lg p-1.5 transition-all ${
+                    !isEditingNotes ? 'hover:bg-amber-50/70 hover:ring-1 hover:ring-amber-300/80 cursor-pointer' : ''
+                  }`}
+                  title={!isEditingNotes ? "Click to edit additional notes" : ""}
+                >
+                  {notesText
+                    .split('\n')
+                    .map(l => l.trim())
+                    .filter(l => l.length > 0)
+                    .map((line, idx) => {
+                      const clean = line.replace(/^[•\-\*]\s*/, '');
+                      return (
+                        <p key={idx}>• {clean}</p>
+                      );
+                    })}
                 </div>
               </div>
             </div>
@@ -577,28 +668,69 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
               </div>
 
               {/* Payment Policy — Advance Payment */}
-              <div className="mt-8 avoid-break">
+              <div className="mt-6 avoid-break">
                 <h3 className="text-sm font-extrabold uppercase tracking-widest text-slate-900 pb-1.5 border-b-2 border-amber-600">
                   PAYMENT POLICY — ADVANCE PAYMENT
                 </h3>
 
-                <div className="mt-4 border border-slate-300 rounded-lg overflow-hidden text-xs">
-                  <div className="grid grid-cols-2 divide-x divide-slate-300 bg-slate-900 text-white font-bold p-2.5">
+                <div className="mt-3 border border-slate-300 rounded-lg overflow-hidden text-xs">
+                  <div className="grid grid-cols-2 divide-x divide-slate-300 bg-slate-900 text-white font-bold p-2">
                     <div>Booking Value</div>
                     <div>Required Advance</div>
                   </div>
-                  <div className="grid grid-cols-2 divide-x divide-slate-300 border-t border-slate-300 p-2.5 bg-white">
+                  <div className="grid grid-cols-2 divide-x divide-slate-300 border-t border-slate-300 p-2 bg-white">
                     <div className="font-semibold text-slate-800">Below ₹5,000</div>
                     <div className="text-slate-700">50% of booking value or ₹2,500 (whichever is higher)</div>
                   </div>
-                  <div className="grid grid-cols-2 divide-x divide-slate-300 border-t border-slate-300 p-2.5 bg-slate-50">
+                  <div className="grid grid-cols-2 divide-x divide-slate-300 border-t border-slate-300 p-2 bg-slate-50">
                     <div className="font-semibold text-slate-800">₹5,000 – ₹20,000</div>
                     <div className="text-slate-700">25% of booking value or ₹5,000 (whichever is higher)</div>
                   </div>
-                  <div className="grid grid-cols-2 divide-x divide-slate-300 border-t border-slate-300 p-2.5 bg-white">
+                  <div className="grid grid-cols-2 divide-x divide-slate-300 border-t border-slate-300 p-2 bg-white">
                     <div className="font-semibold text-slate-800">Above ₹20,000</div>
                     <div className="text-slate-700">40% of booking value or ₹5,000 (whichever is higher)</div>
                   </div>
+                </div>
+              </div>
+
+              {/* Cancellation & Refund Policy */}
+              <div className="mt-6 avoid-break">
+                <h3 className="text-sm font-extrabold uppercase tracking-widest text-slate-900 pb-1.5 border-b-2 border-amber-600">
+                  CANCELLATION & REFUND POLICY
+                </h3>
+
+                <div className="mt-3 border border-slate-300 rounded-lg overflow-hidden text-xs">
+                  <div className="grid grid-cols-2 divide-x divide-slate-300 bg-slate-900 text-white font-bold p-2">
+                    <div>Cancellation Timeline</div>
+                    <div>Refund Applicable</div>
+                  </div>
+                  <div className="grid grid-cols-2 divide-x divide-slate-300 border-t border-slate-300 p-2 bg-white">
+                    <div className="font-semibold text-slate-800">More than 30 days before check-in</div>
+                    <div className="text-slate-700 font-medium">100% refund</div>
+                  </div>
+                  <div className="grid grid-cols-2 divide-x divide-slate-300 border-t border-slate-300 p-2 bg-slate-50">
+                    <div className="font-semibold text-slate-800">15 – 30 days before check-in</div>
+                    <div className="text-slate-700 font-medium">50% refund</div>
+                  </div>
+                  <div className="grid grid-cols-2 divide-x divide-slate-300 border-t border-slate-300 p-2 bg-white">
+                    <div className="font-semibold text-slate-800">7 – 15 days before check-in</div>
+                    <div className="text-slate-700 font-medium">25% refund</div>
+                  </div>
+                  <div className="grid grid-cols-2 divide-x divide-slate-300 border-t border-slate-300 p-2 bg-slate-50">
+                    <div className="font-semibold text-slate-800">Less than 7 days before check-in</div>
+                    <div className="text-slate-700 font-bold text-rose-600">No refund</div>
+                  </div>
+                </div>
+
+                <p className="mt-2 text-[11px] italic text-slate-600 leading-snug">
+                  Note: For payments made via payment gateway, applicable gateway charges (currently 2%) will be deducted additionally from any refundable amount.
+                </p>
+
+                <div className="mt-4 text-xs text-slate-700 avoid-break">
+                  <p className="text-slate-600 font-medium">Warm regards,</p>
+                  <p className="font-black text-sm tracking-wide mt-0.5">
+                    <span className="text-slate-900">Fusion</span><span className="text-red-600">Stays</span>
+                  </p>
                 </div>
               </div>
 

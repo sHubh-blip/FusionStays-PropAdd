@@ -3,13 +3,14 @@ import api from '../api';
 import Sidebar from '../components/Sidebar';
 import CarWhatsAppMessageModal from '../components/CarWhatsAppMessageModal';
 import CarQuotationPDFModal from '../components/CarQuotationPDFModal';
+import CarVoucherPDFModal from '../components/CarVoucherPDFModal';
 import CarBookingModal from '../components/CarBookingModal';
 import CarDaywiseEditModal from '../components/CarDaywiseEditModal';
 import CarPaymentStatusModal from '../components/CarPaymentStatusModal';
 import { 
   Calendar, Search, RefreshCw, MessageSquare, FileText, 
   MapPin, Car, User, Phone, Navigation, ArrowRight, Filter, 
-  Building2, CheckCircle2, ChevronRight, Plus, Edit, CreditCard
+  Building2, CheckCircle2, ChevronRight, Plus, Edit, CreditCard, Receipt
 } from 'lucide-react';
 
 const CarPackageDaywise = () => {
@@ -33,6 +34,7 @@ const CarPackageDaywise = () => {
   const [selectedRowForEdit, setSelectedRowForEdit] = useState(null);
   const [selectedBookingForMsg, setSelectedBookingForMsg] = useState(null);
   const [selectedBookingForPDF, setSelectedBookingForPDF] = useState(null);
+  const [selectedBookingForVoucher, setSelectedBookingForVoucher] = useState(null);
   const [daywiseData, setDaywiseData] = useState([]);
 
 
@@ -53,7 +55,7 @@ const CarPackageDaywise = () => {
         setFilters(res.data.filters);
       }
     } catch (err) {
-      console.error("Failed to fetch daywise records:", err);
+      console.error("Failed to fetch car daywise records:", err);
     } finally {
       setIsLoading(false);
     }
@@ -97,6 +99,17 @@ const CarPackageDaywise = () => {
     }
   };
 
+  const handleOpenVoucherModal = async (dayRow) => {
+    try {
+      const res = await api.get(`/car-packages/booking/${encodeURIComponent(dayRow["Booking ID"] || dayRow["Vendorwise ID"])}`);
+      setSelectedBookingForVoucher(res.data.master || dayRow);
+      setDaywiseData(res.data.daywise || [dayRow]);
+    } catch (err) {
+      setSelectedBookingForVoucher(dayRow);
+      setDaywiseData([dayRow]);
+    }
+  };
+
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden font-sans relative">
       <Sidebar 
@@ -119,7 +132,7 @@ const CarPackageDaywise = () => {
       <main className="flex-1 flex flex-col min-w-0 overflow-y-auto custom-scrollbar">
         
         {/* Top Header */}
-        <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+        <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 py-3 sm:px-6 sm:py-4 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 shadow-sm">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsSidebarOpen(prev => !prev)}
@@ -133,45 +146,45 @@ const CarPackageDaywise = () => {
               </div>
             </button>
             <div>
-              <div className="flex items-center gap-2 text-xs font-bold text-brand-600 uppercase tracking-wider mb-1">
+              <div className="flex items-center gap-2 text-xs font-bold text-brand-600 uppercase tracking-wider mb-0.5 sm:mb-1">
                 <Calendar className="w-4 h-4" />
                 Operations & Itinerary Tracker
               </div>
-              <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
+              <h1 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">
                 Daywise Car Details
               </h1>
-              <p className="text-xs text-slate-500 font-medium">
+              <p className="text-[11px] sm:text-xs text-slate-500 font-medium">
                 Track daily vehicle dispatches, vendor assignments, sightseeing routes, and pickup schedules.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-xs shadow-md shadow-brand-600/20 transition-all active:scale-95"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-xs shadow-md shadow-brand-600/20 transition-all active:scale-95"
             >
               <Plus className="w-4 h-4" />
-              New Car Booking
+              <span>New Car Booking</span>
             </button>
 
             <button
               onClick={handleSync}
               disabled={isSyncing}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 ${
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 ${
                 isSyncing 
                   ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
                   : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-slate-300'
               }`}
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-brand-600' : 'text-slate-500'}`} />
-              {isSyncing ? 'Syncing...' : 'Sync Sheet'}
+              <span>{isSyncing ? 'Syncing...' : 'Sync Sheet'}</span>
             </button>
           </div>
         </header>
 
 
-        <div className="p-6 space-y-6">
+        <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
           
           {/* Filters Bar */}
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
@@ -271,9 +284,15 @@ const CarPackageDaywise = () => {
           </div>
 
           {/* Daywise Table */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            {/* Mobile swipe helper */}
+            <div className="md:hidden px-3.5 py-2 bg-slate-50 border-b border-slate-200 text-[11px] text-slate-500 flex items-center justify-between font-medium">
+              <span>👉 Swipe table horizontally to view daily schedules & routes</span>
+              <span className="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-bold">8 cols</span>
+            </div>
+
             <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full text-left text-xs border-collapse">
+              <table className="w-full text-left text-xs border-collapse min-w-[850px]">
                 <thead>
                   <tr className="bg-slate-50/90 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                     <th className="py-3 px-3 w-28 whitespace-nowrap">Handled By</th>
@@ -416,6 +435,14 @@ const CarPackageDaywise = () => {
                             >
                               <FileText className="w-3.5 h-3.5" />
                             </button>
+
+                            <button
+                              onClick={() => handleOpenVoucherModal(r)}
+                              title="Generate Final Bill / Voucher PDF"
+                              className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg transition-all shadow-2xs active:scale-95"
+                            >
+                              <Receipt className="w-3.5 h-3.5" />
+                            </button>
                           </div>
                         </td>
 
@@ -468,6 +495,15 @@ const CarPackageDaywise = () => {
           booking={selectedBookingForPDF}
           daywise={daywiseData}
           onClose={() => setSelectedBookingForPDF(null)}
+        />
+      )}
+
+      {/* Final Bill / Voucher PDF Modal */}
+      {selectedBookingForVoucher && (
+        <CarVoucherPDFModal
+          booking={selectedBookingForVoucher}
+          daywise={daywiseData}
+          onClose={() => setSelectedBookingForVoucher(null)}
         />
       )}
 
