@@ -4,9 +4,26 @@ import { X, Printer, Download, CheckCircle2, XCircle, AlertTriangle, Loader2, Ed
 const DEFAULT_ADDITIONAL_NOTES = `Note: Permit, parking, Toll taxes, and any entry fees are not included.
 In case there is car scarcity due to festive peak/Dusshera, additional charges up to Rs.4000 can be charged for that specific day.`;
 
+const DEFAULT_QUOTATION_TERMS = `The vehicle will be provided strictly on a point-to-point basis. Any additional services not mentioned in the itinerary will be charged separately.
+Schedules and itineraries may be subjected to last-minute changes due to circumstances beyond our control, including but not limited to local strikes, natural calamities, road closures, or government restrictions.
+In the event of roadblocks or route diversions, the vehicle may take an alternative route. Any additional expenses incurred due to such diversions shall be borne by the guest and paid directly on-site.
+Air conditioning may not function effectively or may be switched off while driving in hilly regions, depending on road and vehicle conditions.
+In case of delayed arrival, any missed sightseeing for that day will not be the responsibility of FusionStays. If the same sightseeing is to be covered on a subsequent day, additional charges may apply.
+Any change in PAX will not result in any change in the vehicle type or the confirmed rates.`;
+
+const DEFAULT_QUOTATION_INCLUSIONS = `Vehicle service on a point-to-point basis as per the confirmed itinerary.
+Driver accommodation and meals.`;
+
+const DEFAULT_QUOTATION_EXCLUSIONS = `Airfare, train fare, or any transportation not specifically mentioned.
+Medical expenses, rescue, evacuation, or emergency assistance.
+Entry fees, permits, travel insurance, and sightseeing charges unless stated.
+Toll taxes, parking, state taxes, and en-route charges unless included.
+Additional expenses from political unrest, natural calamities, vehicle breakdowns, or unforeseen events.`;
+
 const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
   const printRef = useRef();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   // Editable Additional Notes state
   const [notesText, setNotesText] = useState(
@@ -14,38 +31,50 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
   );
   const [isEditingNotes, setIsEditingNotes] = useState(false);
 
-  // Extract variables
-  const guestName = booking?.["Guest Name"] || daywise[0]?.["Guest Name"] || "Guest";
-  const contactNo = booking?.["Contact No"] || daywise[0]?.["Contact No"] || "";
-  const pickupPoint = booking?.["Start City"] || daywise[0]?.["From"] || "NJP";
-  const dropPoint = daywise[daywise.length - 1]?.["To"] || "NJP";
-  const pickupDate = booking?.["Start Date"] || daywise[0]?.["Start Date"] || "21st October";
+  // Editable variables
+  const [guestName, setGuestName] = useState(booking?.["Guest Name"] || daywise[0]?.["Guest Name"] || "Guest");
+  const [contactNo, setContactNo] = useState(booking?.["Contact No"] || daywise[0]?.["Contact No"] || "");
+  const [pickupPoint, setPickupPoint] = useState(booking?.["Start City"] || daywise[0]?.["From"] || "NJP");
+  const [dropPoint, setDropPoint] = useState(daywise[daywise.length - 1]?.["To"] || "NJP");
+  const [pickupDate, setPickupDate] = useState(booking?.["Start Date"] || daywise[0]?.["Start Date"] || "21st October");
   
   // Extract car types & counts
   const carTypesArray = [...new Set(daywise.map(d => d["Car Type"]).filter(Boolean))];
-  const carType = carTypesArray.length > 0 ? carTypesArray.join(', ') : "WagonR";
-  const numberOfCars = daywise.reduce((max, d) => Math.max(max, parseInt(d["No of Cars"], 10) || 1), 1);
+  const initialCarType = carTypesArray.length > 0 ? carTypesArray.join(', ') : "WagonR";
+  const [carType, setCarType] = useState(initialCarType);
+  const initialCarCount = daywise.reduce((max, d) => Math.max(max, parseInt(d["No of Cars"], 10) || 1), 1);
+  const [numberOfCars, setNumberOfCars] = useState(initialCarCount);
   
   const paxStr = booking?.["Pax"] || "3";
-  // Parse adults, children, infants from Pax (e.g. "3+2" or "4")
-  let adults = paxStr;
-  let children = "0";
-  let infants = "0";
+  let defaultAdults = paxStr;
+  let defaultChildren = "0";
+  let defaultInfants = "0";
   if (paxStr.includes('+')) {
     const parts = paxStr.split('+');
-    adults = parts[0] || "1";
-    children = parts[1] || "0";
-    if (parts[2]) infants = parts[2];
+    defaultAdults = parts[0] || "1";
+    defaultChildren = parts[1] || "0";
+    if (parts[2]) defaultInfants = parts[2];
   }
+  const [adults, setAdults] = useState(defaultAdults);
+  const [children, setChildren] = useState(defaultChildren);
+  const [infants, setInfants] = useState(defaultInfants);
 
-  const totalAmount = booking?.["Total Sales"] || booking?.["Billing Amt"] || "16000";
-  const advanceAmount = booking?.["Advance Recieved"] || "5000";
+  const [totalAmount, setTotalAmount] = useState(booking?.["Total Sales"] || booking?.["Billing Amt"] || "16000");
+  const [advanceAmount, setAdvanceAmount] = useState(booking?.["Advance Recieved"] || "5000");
+
+  // Editable Terms & Policies
+  const [quotationTerms, setQuotationTerms] = useState(DEFAULT_QUOTATION_TERMS);
+  const [inclusionsText, setInclusionsText] = useState(DEFAULT_QUOTATION_INCLUSIONS);
+  const [exclusionsText, setExclusionsText] = useState(DEFAULT_QUOTATION_EXCLUSIONS);
 
   // Current formatted quotation date
-  const quotationDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const [quotationDate, setQuotationDate] = useState(
+    new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+  );
 
   const handlePrint = () => {
-    if (isEditingNotes) {
+    if (isEditMode || isEditingNotes) {
+      setIsEditMode(false);
       setIsEditingNotes(false);
       setTimeout(executePrint, 60);
     } else {
@@ -334,6 +363,30 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
           </div>
           
           <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto">
+            {/* Edit Quotation Info & Terms Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setIsEditMode(!isEditMode)}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border transition-all active:scale-95 cursor-pointer ${
+                isEditMode
+                  ? 'bg-amber-500 text-slate-900 border-amber-400 shadow-md ring-2 ring-amber-400/50'
+                  : 'bg-slate-800 text-slate-200 hover:text-white hover:bg-slate-700 border-slate-700'
+              }`}
+              title="Edit quotation guest info, pickup/drop, amounts, general terms, inclusions, and exclusions"
+            >
+              {isEditMode ? (
+                <>
+                  <Check className="w-4 h-4 text-slate-900" />
+                  <span>Finish Editing</span>
+                </>
+              ) : (
+                <>
+                  <Edit3 className="w-4 h-4 text-amber-400" />
+                  <span>Edit Quotation & Terms</span>
+                </>
+              )}
+            </button>
+
             <button
               onClick={handlePrint}
               disabled={isGenerating}
@@ -370,12 +423,22 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
             <div className="flex items-center gap-2">
               <span className="text-sm sm:text-base">📄</span>
               <span className="text-[11px] sm:text-xs">
-                <strong>Multi-Page PDF Ready:</strong> Page 1 (Booking & Itinerary) & Page 2 (Terms & Policies).
+                {isEditMode ? (
+                  <strong className="text-amber-800">Edit Mode Active: You can edit guest details, pickup/drop, amounts, terms, inclusions, and exclusions directly below.</strong>
+                ) : (
+                  <><strong>Multi-Page PDF Ready:</strong> Page 1 (Booking & Itinerary) & Page 2 (Terms & Policies). Click "Edit Quotation & Terms" to edit before printing/saving.</>
+                )}
               </span>
             </div>
-            <span className="text-[10px] sm:text-[11px] text-amber-800 bg-amber-200/60 font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg whitespace-nowrap">
-              2 Pages
-            </span>
+            {isEditMode ? (
+              <span className="text-[10px] sm:text-[11px] text-amber-900 bg-amber-200/80 font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg whitespace-nowrap flex items-center gap-1">
+                <Edit3 className="w-3 h-3" /> Editing
+              </span>
+            ) : (
+              <span className="text-[10px] sm:text-[11px] text-amber-800 bg-amber-200/60 font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg whitespace-nowrap">
+                2 Pages
+              </span>
+            )}
           </div>
 
           <div 
@@ -409,7 +472,20 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
 
               {/* Dear Guest Message */}
               <div className="mt-6 space-y-1">
-                <p className="text-sm font-semibold text-slate-800">Dear {guestName},</p>
+                <p className="text-sm font-semibold text-slate-800 flex items-center gap-1">
+                  Dear{' '}
+                  {isEditMode ? (
+                    <input
+                      type="text"
+                      value={guestName}
+                      onChange={(e) => setGuestName(e.target.value)}
+                      className="text-sm font-semibold border border-amber-300 rounded px-1.5 py-0.5 bg-amber-50/50 focus:outline-none"
+                    />
+                  ) : (
+                    <span>{guestName}</span>
+                  )}
+                  ,
+                </p>
                 <p className="text-xs text-slate-600">
                   Thank you for choosing FusionStays. Please find below the details of your car booking quotation.
                 </p>
@@ -432,31 +508,119 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
                 <div className="mt-4 border border-slate-300 rounded-lg overflow-hidden text-xs">
                   <div className="grid grid-cols-2 divide-x divide-slate-300 border-b border-slate-300">
                     <div className="p-2.5 bg-slate-50 font-bold text-slate-900">Pickup Point</div>
-                    <div className="p-2.5 font-medium text-slate-800">{pickupPoint}</div>
+                    <div className="p-2.5 font-medium text-slate-800">
+                      {isEditMode ? (
+                        <input
+                          type="text"
+                          value={pickupPoint}
+                          onChange={(e) => setPickupPoint(e.target.value)}
+                          className="w-full text-xs font-medium border border-amber-300 rounded px-1.5 py-0.5 bg-amber-50/50 focus:outline-none"
+                        />
+                      ) : (
+                        pickupPoint
+                      )}
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 divide-x divide-slate-300 border-b border-slate-300">
                     <div className="p-2.5 bg-slate-50 font-bold text-slate-900">Drop Point</div>
-                    <div className="p-2.5 font-medium text-slate-800">{dropPoint}</div>
+                    <div className="p-2.5 font-medium text-slate-800">
+                      {isEditMode ? (
+                        <input
+                          type="text"
+                          value={dropPoint}
+                          onChange={(e) => setDropPoint(e.target.value)}
+                          className="w-full text-xs font-medium border border-amber-300 rounded px-1.5 py-0.5 bg-amber-50/50 focus:outline-none"
+                        />
+                      ) : (
+                        dropPoint
+                      )}
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 divide-x divide-slate-300 border-b border-slate-300">
                     <div className="p-2.5 bg-slate-50 font-bold text-slate-900">Pickup Date</div>
-                    <div className="p-2.5 font-medium text-slate-800">{pickupDate}</div>
+                    <div className="p-2.5 font-medium text-slate-800">
+                      {isEditMode ? (
+                        <input
+                          type="text"
+                          value={pickupDate}
+                          onChange={(e) => setPickupDate(e.target.value)}
+                          className="w-full text-xs font-medium border border-amber-300 rounded px-1.5 py-0.5 bg-amber-50/50 focus:outline-none"
+                        />
+                      ) : (
+                        pickupDate
+                      )}
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 divide-x divide-slate-300 border-b border-slate-300">
                     <div className="p-2.5 bg-slate-50 font-bold text-slate-900">Car Type</div>
-                    <div className="p-2.5 font-medium text-slate-800">{carType}</div>
+                    <div className="p-2.5 font-medium text-slate-800">
+                      {isEditMode ? (
+                        <input
+                          type="text"
+                          value={carType}
+                          onChange={(e) => setCarType(e.target.value)}
+                          className="w-full text-xs font-medium border border-amber-300 rounded px-1.5 py-0.5 bg-amber-50/50 focus:outline-none"
+                        />
+                      ) : (
+                        carType
+                      )}
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 divide-x divide-slate-300 border-b border-slate-300">
                     <div className="p-2.5 bg-slate-50 font-bold text-slate-900">Number of Cars</div>
-                    <div className="p-2.5 font-medium text-slate-800">{numberOfCars}</div>
+                    <div className="p-2.5 font-medium text-slate-800">
+                      {isEditMode ? (
+                        <input
+                          type="number"
+                          value={numberOfCars}
+                          onChange={(e) => setNumberOfCars(e.target.value)}
+                          className="w-full text-xs font-medium border border-amber-300 rounded px-1.5 py-0.5 bg-amber-50/50 focus:outline-none"
+                        />
+                      ) : (
+                        numberOfCars
+                      )}
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 divide-x divide-slate-300 border-b border-slate-300">
                     <div className="p-2.5 bg-slate-50 font-bold text-slate-900">Adults</div>
-                    <div className="p-2.5 font-medium text-slate-800">{adults}</div>
+                    <div className="p-2.5 font-medium text-slate-800">
+                      {isEditMode ? (
+                        <input
+                          type="text"
+                          value={adults}
+                          onChange={(e) => setAdults(e.target.value)}
+                          className="w-full text-xs font-medium border border-amber-300 rounded px-1.5 py-0.5 bg-amber-50/50 focus:outline-none"
+                        />
+                      ) : (
+                        adults
+                      )}
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 divide-x divide-slate-300">
                     <div className="p-2.5 bg-slate-50 font-bold text-slate-900">Children / Infants</div>
-                    <div className="p-2.5 font-medium text-slate-800">{children} / {infants}</div>
+                    <div className="p-2.5 font-medium text-slate-800">
+                      {isEditMode ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="text"
+                            value={children}
+                            onChange={(e) => setChildren(e.target.value)}
+                            className="w-16 text-xs font-medium border border-amber-300 rounded px-1.5 py-0.5 bg-amber-50/50 focus:outline-none"
+                            placeholder="Children"
+                          />
+                          <span>/</span>
+                          <input
+                            type="text"
+                            value={infants}
+                            onChange={(e) => setInfants(e.target.value)}
+                            className="w-16 text-xs font-medium border border-amber-300 rounded px-1.5 py-0.5 bg-amber-50/50 focus:outline-none"
+                            placeholder="Infants"
+                          />
+                        </div>
+                      ) : (
+                        `${children} / ${infants}`
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -464,11 +628,35 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
                 <div className="mt-4 grid grid-cols-2 border border-slate-300 rounded-lg overflow-hidden text-xs">
                   <div className="p-3 bg-slate-100 font-bold text-slate-900 flex justify-between items-center border-r border-slate-300">
                     <span>Total Amount</span>
-                    <span className="text-amber-700 font-black text-sm">₹{totalAmount}/-</span>
+                    {isEditMode ? (
+                      <div className="flex items-center gap-1">
+                        <span>₹</span>
+                        <input
+                          type="text"
+                          value={totalAmount}
+                          onChange={(e) => setTotalAmount(e.target.value)}
+                          className="w-24 text-xs font-black text-amber-700 border border-amber-300 rounded px-1.5 py-0.5 bg-amber-50/50 focus:outline-none text-right"
+                        />
+                      </div>
+                    ) : (
+                      <span className="text-amber-700 font-black text-sm">₹{totalAmount}/-</span>
+                    )}
                   </div>
                   <div className="p-3 bg-amber-50 font-bold text-slate-900 flex justify-between items-center">
                     <span>Advance Amount</span>
-                    <span className="text-amber-700 font-black text-sm">₹{advanceAmount}/-</span>
+                    {isEditMode ? (
+                      <div className="flex items-center gap-1">
+                        <span>₹</span>
+                        <input
+                          type="text"
+                          value={advanceAmount}
+                          onChange={(e) => setAdvanceAmount(e.target.value)}
+                          className="w-24 text-xs font-black text-amber-700 border border-amber-300 rounded px-1.5 py-0.5 bg-amber-50/50 focus:outline-none text-right"
+                        />
+                      </div>
+                    ) : (
+                      <span className="text-amber-700 font-black text-sm">₹{advanceAmount}/-</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -601,17 +789,48 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
 
               {/* General Terms & Conditions */}
               <div className="avoid-break">
-                <h3 className="text-sm font-extrabold uppercase tracking-widest text-slate-900 pb-1.5 border-b-2 border-amber-600">
-                  GENERAL TERMS & CONDITIONS
-                </h3>
-                <ul className="mt-4 space-y-2 text-xs text-slate-700 list-disc list-inside leading-relaxed">
-                  <li>The vehicle will be provided strictly on a point-to-point basis. Any additional services not mentioned in the itinerary will be charged separately.</li>
-                  <li>Schedules and itineraries may be subjected to last-minute changes due to circumstances beyond our control, including but not limited to local strikes, natural calamities, road closures, or government restrictions.</li>
-                  <li>In the event of roadblocks or route diversions, the vehicle may take an alternative route. Any additional expenses incurred due to such diversions shall be borne by the guest and paid directly on-site.</li>
-                  <li>Air conditioning may not function effectively or may be switched off while driving in hilly regions, depending on road and vehicle conditions.</li>
-                  <li>In case of delayed arrival, any missed sightseeing for that day will not be the responsibility of FusionStays. If the same sightseeing is to be covered on a subsequent day, additional charges may apply.</li>
-                  <li>Any change in PAX will not result in any change in the vehicle type or the confirmed rates.</li>
-                </ul>
+                <div className="flex items-center justify-between pb-1.5 border-b-2 border-amber-600">
+                  <h3 className="text-sm font-extrabold uppercase tracking-widest text-slate-900">
+                    GENERAL TERMS & CONDITIONS
+                  </h3>
+                  {isEditMode && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuotationTerms(DEFAULT_QUOTATION_TERMS);
+                        setInclusionsText(DEFAULT_QUOTATION_INCLUSIONS);
+                        setExclusionsText(DEFAULT_QUOTATION_EXCLUSIONS);
+                      }}
+                      className="flex items-center gap-1 text-[11px] text-amber-700 hover:text-amber-900 font-semibold cursor-pointer underline"
+                    >
+                      <RotateCcw className="w-3 h-3" /> Reset default terms
+                    </button>
+                  )}
+                </div>
+
+                {isEditMode ? (
+                  <div className="mt-3 space-y-1.5">
+                    <label className="text-[10px] font-bold text-amber-800 uppercase">
+                      Terms & Conditions (One item per line):
+                    </label>
+                    <textarea
+                      rows={6}
+                      value={quotationTerms}
+                      onChange={(e) => setQuotationTerms(e.target.value)}
+                      className="w-full text-xs p-2 border border-amber-300 rounded-lg bg-amber-50/40 text-slate-800 focus:outline-none"
+                    />
+                  </div>
+                ) : (
+                  <ul className="mt-4 space-y-2 text-xs text-slate-700 list-disc list-inside leading-relaxed">
+                    {quotationTerms
+                      .split('\n')
+                      .map(t => t.trim())
+                      .filter(Boolean)
+                      .map((point, idx) => (
+                        <li key={idx}>{point.replace(/^[•\-\*]\s*/, '')}</li>
+                      ))}
+                  </ul>
+                )}
               </div>
 
               {/* Inclusions & Exclusions */}
@@ -623,16 +842,27 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                     PACKAGE INCLUSIONS
                   </h4>
-                  <ul className="mt-3 space-y-2 text-xs text-slate-700">
-                    <li className="flex items-start gap-1.5">
-                      <span className="text-emerald-600 font-bold">•</span>
-                      <span>Vehicle service on a point-to-point basis as per the confirmed itinerary.</span>
-                    </li>
-                    <li className="flex items-start gap-1.5">
-                      <span className="text-emerald-600 font-bold">•</span>
-                      <span>Driver accommodation and meals.</span>
-                    </li>
-                  </ul>
+                  {isEditMode ? (
+                    <textarea
+                      rows={4}
+                      value={inclusionsText}
+                      onChange={(e) => setInclusionsText(e.target.value)}
+                      className="w-full text-xs p-2 mt-2 border border-emerald-300 rounded-lg bg-emerald-50/40 text-slate-800 focus:outline-none"
+                    />
+                  ) : (
+                    <ul className="mt-3 space-y-2 text-xs text-slate-700">
+                      {inclusionsText
+                        .split('\n')
+                        .map(l => l.trim())
+                        .filter(Boolean)
+                        .map((line, idx) => (
+                          <li key={idx} className="flex items-start gap-1.5">
+                            <span className="text-emerald-600 font-bold">•</span>
+                            <span>{line.replace(/^[•\-\*]\s*/, '')}</span>
+                          </li>
+                        ))}
+                    </ul>
+                  )}
                 </div>
 
                 {/* Package Exclusions */}
@@ -641,28 +871,27 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
                     <XCircle className="w-4 h-4 text-rose-600" />
                     PACKAGE EXCLUSIONS
                   </h4>
-                  <ul className="mt-3 space-y-2 text-xs text-slate-700">
-                    <li className="flex items-start gap-1.5">
-                      <span className="text-rose-600 font-bold">•</span>
-                      <span>Airfare, train fare, or any transportation not specifically mentioned.</span>
-                    </li>
-                    <li className="flex items-start gap-1.5">
-                      <span className="text-rose-600 font-bold">•</span>
-                      <span>Medical expenses, rescue, evacuation, or emergency assistance.</span>
-                    </li>
-                    <li className="flex items-start gap-1.5">
-                      <span className="text-rose-600 font-bold">•</span>
-                      <span>Entry fees, permits, travel insurance, and sightseeing charges unless stated.</span>
-                    </li>
-                    <li className="flex items-start gap-1.5">
-                      <span className="text-rose-600 font-bold">•</span>
-                      <span>Toll taxes, parking, state taxes, and en-route charges unless included.</span>
-                    </li>
-                    <li className="flex items-start gap-1.5">
-                      <span className="text-rose-600 font-bold">•</span>
-                      <span>Additional expenses from political unrest, natural calamities, vehicle breakdowns, or unforeseen events.</span>
-                    </li>
-                  </ul>
+                  {isEditMode ? (
+                    <textarea
+                      rows={6}
+                      value={exclusionsText}
+                      onChange={(e) => setExclusionsText(e.target.value)}
+                      className="w-full text-xs p-2 mt-2 border border-rose-300 rounded-lg bg-rose-50/40 text-slate-800 focus:outline-none"
+                    />
+                  ) : (
+                    <ul className="mt-3 space-y-2 text-xs text-slate-700">
+                      {exclusionsText
+                        .split('\n')
+                        .map(l => l.trim())
+                        .filter(Boolean)
+                        .map((line, idx) => (
+                          <li key={idx} className="flex items-start gap-1.5">
+                            <span className="text-rose-600 font-bold">•</span>
+                            <span>{line.replace(/^[•\-\*]\s*/, '')}</span>
+                          </li>
+                        ))}
+                    </ul>
+                  )}
                 </div>
 
               </div>

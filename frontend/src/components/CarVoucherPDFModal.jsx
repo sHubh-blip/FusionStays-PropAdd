@@ -1,28 +1,58 @@
 import React, { useRef, useState } from 'react';
-import { X, Printer, Download, Loader2 } from 'lucide-react';
+import { X, Printer, Download, Loader2, Edit3, Check, RotateCcw } from 'lucide-react';
+
+const DEFAULT_TERMS_P1 = `The vehicle will be provided strictly on a point-to-point basis. Any additional services not mentioned in the itinerary will be charged separately.
+Schedules and itineraries may be subjected to last-minute changes due to circumstances beyond our control, including but not limited to local strikes, natural calamities, road closures, or government restrictions.`;
+
+const DEFAULT_TERMS_P2 = `In the event of roadblocks or route diversions, the vehicle may take an alternative route. Any additional expenses incurred due to such diversions shall be borne by the guest and paid directly on-site.
+Air conditioning may not function effectively or may be switched off while driving in hilly regions, depending on road and vehicle conditions.
+In case of delayed arrival, any missed sightseeing for that day will not be the responsibility of FusionStays. If the same sightseeing is to be covered on a subsequent day, additional charges may apply.
+Any change in PAX will not result in any change in the vehicle type or the confirmed rates.
+Car Vendor details will be shared before 1 day from Pick Up Date.
+Due payment will be paid on the day of Pickup.
+Parking and permit charges, if applicable, are at extra cost.`;
+
+const DEFAULT_INCLUSIONS = `Vehicle service on a point-to-point basis as per the confirmed itinerary.
+Driver accommodation and meals.`;
+
+const DEFAULT_EXCLUSIONS = `Airfare, train fare, or any transportation not specifically mentioned.
+Medical expenses, rescue, evacuation, or emergency assistance.
+Entry fees, permits, travel insurance, and sightseeing charges unless stated.
+Toll taxes, parking, state taxes, and en-route charges unless included.
+Additional expenses from political unrest, natural calamities, vehicle breakdowns, or unforeseen events.`;
 
 const CarVoucherPDFModal = ({ booking, daywise = [], onClose }) => {
   const printRef = useRef();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
 
-  // Extract variables
-  const guestName = booking?.["Guest Name"] || daywise[0]?.["Guest Name"] || "Guest";
-  const contactNo = booking?.["Contact No"] || daywise[0]?.["Contact No"] || "";
-  const reservationId = booking?.["Booking ID"] || booking?.["Vendorwise ID"] || "CAR-SEP-1220";
-  
+  // Editable General Information
+  const [guestName, setGuestName] = useState(booking?.["Guest Name"] || daywise[0]?.["Guest Name"] || "Guest");
+  const [contactNo, setContactNo] = useState(booking?.["Contact No"] || daywise[0]?.["Contact No"] || "");
+  const [fusionContact, setFusionContact] = useState("8777455648/ 8910980519");
+  const [reservationId, setReservationId] = useState(booking?.["Booking ID"] || booking?.["Vendorwise ID"] || "CAR-SEP-1220");
+  const [gstnNo, setGstnNo] = useState("19AADCF8613N1Z5");
+
   // Dates
-  const startDate = booking?.["Start Date"] || daywise[0]?.["Start Date"] || "17-October-2026";
-  const endDate = booking?.["End Date"] || daywise[daywise.length - 1]?.["Start Date"] || daywise[daywise.length - 1]?.["Date"] || "24-October-2026";
-  
+  const [startDate, setStartDate] = useState(booking?.["Start Date"] || daywise[0]?.["Start Date"] || "17-October-2026");
+  const [endDate, setEndDate] = useState(booking?.["End Date"] || daywise[daywise.length - 1]?.["Start Date"] || daywise[daywise.length - 1]?.["Date"] || "24-October-2026");
+
   // Reservation creation / voucher date
   const now = new Date();
   const formattedToday = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
-  const voucherDate = booking?.["Date"] || formattedToday;
+  const [voucherDate, setVoucherDate] = useState(booking?.["Date"] || formattedToday);
 
   // Car Type & Pax
   const carTypesArray = [...new Set(daywise.map(d => d["Car Type"]).filter(Boolean))];
-  const carType = carTypesArray.length > 0 ? carTypesArray.join(', ') : (booking?.["Car Type"] || "WagonR");
-  const persons = booking?.["Pax"] || "3";
+  const initialCarType = carTypesArray.length > 0 ? carTypesArray.join(', ') : (booking?.["Car Type"] || "WagonR");
+  const [carType, setCarType] = useState(initialCarType);
+  const [persons, setPersons] = useState(booking?.["Pax"] || "3");
+
+  // Editable Terms & Conditions
+  const [termsP1, setTermsP1] = useState(DEFAULT_TERMS_P1);
+  const [termsP2, setTermsP2] = useState(DEFAULT_TERMS_P2);
+  const [inclusionsText, setInclusionsText] = useState(DEFAULT_INCLUSIONS);
+  const [exclusionsText, setExclusionsText] = useState(DEFAULT_EXCLUSIONS);
 
   // Financial calculations
   const netTotalRaw = parseFloat(booking?.["Total Sales"] || booking?.["Billing Amt"] || 37000) || 0;
@@ -34,6 +64,15 @@ const CarVoucherPDFModal = ({ booking, daywise = [], onClose }) => {
   const dueAmt = Math.max(0, netTotal - advanceAmt);
 
   const handlePrint = () => {
+    if (isEditMode) {
+      setIsEditMode(false);
+      setTimeout(executePrint, 60);
+    } else {
+      executePrint();
+    }
+  };
+
+  const executePrint = () => {
     const printableEl = printRef.current;
     if (!printableEl) return;
 
@@ -178,7 +217,7 @@ const CarVoucherPDFModal = ({ booking, daywise = [], onClose }) => {
               if (document.body.contains(iframe)) {
                 document.body.removeChild(iframe);
               }
-            } catch (e) {}
+            } catch (e) { }
           }, 4000);
         }
       }, 350);
@@ -187,7 +226,7 @@ const CarVoucherPDFModal = ({ booking, daywise = [], onClose }) => {
 
   return (
     <div className="pdf-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in overflow-y-auto">
-      
+
       {/* Print stylesheet override */}
       <style id="voucher-main-print-override">{`
         @media print {
@@ -285,7 +324,7 @@ const CarVoucherPDFModal = ({ booking, daywise = [], onClose }) => {
       `}</style>
 
       <div className="pdf-modal-dialog bg-slate-100 w-full max-w-4xl rounded-xl sm:rounded-2xl shadow-2xl border border-slate-200 flex flex-col max-h-[96vh] sm:max-h-[92vh] overflow-hidden">
-        
+
         {/* Modal Top Bar */}
         <div className="px-4 py-3 sm:px-6 sm:py-4 bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 no-print">
           <div className="flex items-center gap-3">
@@ -304,8 +343,31 @@ const CarVoucherPDFModal = ({ booking, daywise = [], onClose }) => {
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto">
+            {/* Edit Voucher Info & Terms Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setIsEditMode(!isEditMode)}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border transition-all active:scale-95 cursor-pointer ${isEditMode
+                ? 'bg-amber-500 text-slate-900 border-amber-400 shadow-md ring-2 ring-amber-400/50'
+                : 'bg-slate-800 text-slate-200 hover:text-white hover:bg-slate-700 border-slate-700'
+                }`}
+              title="Edit voucher contact numbers, general terms, inclusions, exclusions, and booking info"
+            >
+              {isEditMode ? (
+                <>
+                  <Check className="w-4 h-4 text-slate-900" />
+                  <span>Finish Editing</span>
+                </>
+              ) : (
+                <>
+                  <Edit3 className="w-4 h-4 text-amber-400" />
+                  <span>Edit Voucher Info & Terms</span>
+                </>
+              )}
+            </button>
+
             <button
               onClick={handlePrint}
               disabled={isGenerating}
@@ -325,7 +387,7 @@ const CarVoucherPDFModal = ({ booking, daywise = [], onClose }) => {
                 </>
               )}
             </button>
-            <button 
+            <button
               onClick={onClose}
               className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors"
             >
@@ -336,29 +398,39 @@ const CarVoucherPDFModal = ({ booking, daywise = [], onClose }) => {
 
         {/* Printable Document Container */}
         <div className="pdf-modal-content p-2 sm:p-6 md:p-10 overflow-y-auto overflow-x-auto flex-1 bg-slate-200/80 custom-scrollbar flex flex-col items-center w-full">
-          
+
           {/* Download helper banner */}
           <div className="mb-4 bg-rose-50 border border-rose-200/80 rounded-xl p-2.5 sm:p-3 text-xs text-rose-900 flex items-center justify-between gap-2 sm:gap-3 no-print max-w-[800px] w-full shadow-sm">
             <div className="flex items-center gap-2">
               <span className="text-sm sm:text-base">🎫</span>
               <span className="text-[11px] sm:text-xs">
-                <strong>2-Page Booking Voucher Ready:</strong> Page 1 (Booking & Billing) & Page 2 (Terms & Refund Policy).
+                {isEditMode ? (
+                  <strong className="text-amber-800">Edit Mode Active: You can edit phone numbers, reservation details, terms & conditions, inclusions and exclusions directly below.</strong>
+                ) : (
+                  <><strong>2-Page Booking Voucher Ready:</strong> Page 1 (Booking & Billing) & Page 2 (Terms & Refund Policy). Click "Edit Voucher Info & Terms" above to customize any field.</>
+                )}
               </span>
             </div>
-            <span className="text-[10px] sm:text-[11px] text-rose-800 bg-rose-200/60 font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg whitespace-nowrap">
-              2 Pages
-            </span>
+            {isEditMode ? (
+              <span className="text-[10px] sm:text-[11px] text-amber-900 bg-amber-200/80 font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg whitespace-nowrap flex items-center gap-1">
+                <Edit3 className="w-3 h-3" /> Editing
+              </span>
+            ) : (
+              <span className="text-[10px] sm:text-[11px] text-rose-800 bg-rose-200/60 font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg whitespace-nowrap">
+                2 Pages
+              </span>
+            )}
           </div>
 
-          <div 
-            id="voucher-printable" 
+          <div
+            id="voucher-printable"
             ref={printRef}
             className="w-full max-w-[800px] min-w-[320px] sm:min-w-0 bg-white shadow-xl rounded-none p-4 sm:p-8 md:p-12 text-slate-900 font-sans"
           >
-            
+
             {/* ====== PAGE 1 ====== */}
             <div className="print-page pb-4">
-              
+
               {/* Header Box (Logo on left, Reservation ID & Date on right) */}
               <div className="border border-slate-300 rounded-none flex items-stretch">
                 <div className="w-1/2 p-3.5 flex items-center">
@@ -372,18 +444,48 @@ const CarVoucherPDFModal = ({ booking, daywise = [], onClose }) => {
                   <div className="text-xs font-semibold text-slate-700">
                     Reservation ID
                   </div>
-                  <div className="text-xs font-bold text-slate-900">
-                    {reservationId}
-                  </div>
-                  <div className="text-xs text-slate-700 mt-1 font-medium">
-                    Date- <span className="font-semibold text-slate-900">{voucherDate}</span>
+                  {isEditMode ? (
+                    <input
+                      type="text"
+                      value={reservationId}
+                      onChange={(e) => setReservationId(e.target.value)}
+                      className="text-xs font-bold text-right text-slate-900 border border-amber-300 rounded px-1.5 py-0.5 bg-amber-50/50 focus:outline-none"
+                    />
+                  ) : (
+                    <div className="text-xs font-bold text-slate-900">
+                      {reservationId}
+                    </div>
+                  )}
+                  <div className="text-xs text-slate-700 mt-1 font-medium flex items-center justify-end gap-1">
+                    Date-{' '}
+                    {isEditMode ? (
+                      <input
+                        type="text"
+                        value={voucherDate}
+                        onChange={(e) => setVoucherDate(e.target.value)}
+                        className="text-xs font-semibold text-slate-900 border border-amber-300 rounded px-1 py-0.5 bg-amber-50/50 focus:outline-none text-right w-28"
+                      />
+                    ) : (
+                      <span className="font-semibold text-slate-900">{voucherDate}</span>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Contact Line */}
               <div className="text-center text-[11px] text-slate-800 font-medium my-2">
-                FusionStays Contact No : 9330254852 / 9163334396 / 9874148277
+                FusionStays Contact No :{' '}
+                {isEditMode ? (
+                  <input
+                    type="text"
+                    value={fusionContact}
+                    onChange={(e) => setFusionContact(e.target.value)}
+                    className="w-80 text-[11px] text-center font-medium border border-amber-300 rounded px-1.5 py-0.5 bg-amber-50/50 focus:outline-none"
+                    placeholder="FusionStays Contact Numbers..."
+                  />
+                ) : (
+                  <span>{fusionContact}</span>
+                )}
               </div>
 
               {/* Booking Details */}
@@ -396,21 +498,88 @@ const CarVoucherPDFModal = ({ booking, daywise = [], onClose }) => {
                   <tbody>
                     <tr className="border-b border-slate-300">
                       <td className="border-r border-slate-300 p-1.5 font-medium text-slate-700 w-1/4">Guest Name</td>
-                      <td className="border-r border-slate-300 p-1.5 font-semibold text-slate-900 w-1/4">{guestName}</td>
+                      <td className="border-r border-slate-300 p-1.5 font-semibold text-slate-900 w-1/4">
+                        {isEditMode ? (
+                          <input
+                            type="text"
+                            value={guestName}
+                            onChange={(e) => setGuestName(e.target.value)}
+                            className="w-full text-xs font-semibold border border-amber-300 rounded px-1 py-0.5 bg-amber-50/50 focus:outline-none"
+                          />
+                        ) : (
+                          guestName
+                        )}
+                      </td>
                       <td className="border-r border-slate-300 p-1.5 font-medium text-slate-700 w-1/4">Start Date</td>
-                      <td className="p-1.5 font-medium text-slate-900 w-1/4">{startDate}</td>
+                      <td className="p-1.5 font-medium text-slate-900 w-1/4">
+                        {isEditMode ? (
+                          <input
+                            type="text"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className="w-full text-xs font-medium border border-amber-300 rounded px-1 py-0.5 bg-amber-50/50 focus:outline-none"
+                          />
+                        ) : (
+                          startDate
+                        )}
+                      </td>
                     </tr>
                     <tr className="border-b border-slate-300">
                       <td className="border-r border-slate-300 p-1.5 font-medium text-slate-700">Contact Number</td>
-                      <td className="border-r border-slate-300 p-1.5 font-medium text-slate-900">{contactNo || "N/A"}</td>
+                      <td className="border-r border-slate-300 p-1.5 font-medium text-slate-900">
+                        {isEditMode ? (
+                          <input
+                            type="text"
+                            value={contactNo}
+                            onChange={(e) => setContactNo(e.target.value)}
+                            className="w-full text-xs font-medium border border-amber-300 rounded px-1 py-0.5 bg-amber-50/50 focus:outline-none"
+                            placeholder="Guest contact no"
+                          />
+                        ) : (
+                          contactNo || "N/A"
+                        )}
+                      </td>
                       <td className="border-r border-slate-300 p-1.5 font-medium text-slate-700">End Date</td>
-                      <td className="p-1.5 font-medium text-slate-900">{endDate}</td>
+                      <td className="p-1.5 font-medium text-slate-900">
+                        {isEditMode ? (
+                          <input
+                            type="text"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            className="w-full text-xs font-medium border border-amber-300 rounded px-1 py-0.5 bg-amber-50/50 focus:outline-none"
+                          />
+                        ) : (
+                          endDate
+                        )}
+                      </td>
                     </tr>
                     <tr>
                       <td className="border-r border-slate-300 p-1.5 font-medium text-slate-700">Persons</td>
-                      <td className="border-r border-slate-300 p-1.5 font-medium text-slate-900">{persons}</td>
+                      <td className="border-r border-slate-300 p-1.5 font-medium text-slate-900">
+                        {isEditMode ? (
+                          <input
+                            type="text"
+                            value={persons}
+                            onChange={(e) => setPersons(e.target.value)}
+                            className="w-full text-xs font-medium border border-amber-300 rounded px-1 py-0.5 bg-amber-50/50 focus:outline-none"
+                          />
+                        ) : (
+                          persons
+                        )}
+                      </td>
                       <td className="border-r border-slate-300 p-1.5 font-medium text-slate-700">Car Type</td>
-                      <td className="p-1.5 font-medium text-slate-900">{carType}</td>
+                      <td className="p-1.5 font-medium text-slate-900">
+                        {isEditMode ? (
+                          <input
+                            type="text"
+                            value={carType}
+                            onChange={(e) => setCarType(e.target.value)}
+                            className="w-full text-xs font-medium border border-amber-300 rounded px-1 py-0.5 bg-amber-50/50 focus:outline-none"
+                          />
+                        ) : (
+                          carType
+                        )}
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -505,46 +674,62 @@ const CarVoucherPDFModal = ({ booking, daywise = [], onClose }) => {
                 <h3 className="text-center font-bold text-xs uppercase tracking-wider text-slate-900 mb-2">
                   General Terms & Conditions
                 </h3>
-                <ul className="space-y-1.5 text-xs text-slate-800 list-disc list-outside ml-4 leading-relaxed">
-                  <li>
-                    The vehicle will be provided strictly on a point-to-point basis. Any additional services not mentioned in the itinerary will be charged separately.
-                  </li>
-                  <li>
-                    Schedules and itineraries may be subjected to last-minute changes due to circumstances beyond our control, including but not limited to local strikes, natural calamities, road closures, or government restrictions.
-                  </li>
-                </ul>
+
+                {isEditMode ? (
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-amber-800 uppercase">
+                      Page 1 Terms (One condition per line):
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={termsP1}
+                      onChange={(e) => setTermsP1(e.target.value)}
+                      className="w-full text-xs p-2 border border-amber-300 rounded-lg bg-amber-50/40 text-slate-800 focus:outline-none"
+                    />
+                  </div>
+                ) : (
+                  <ul className="space-y-1.5 text-xs text-slate-800 list-disc list-outside ml-4 leading-relaxed">
+                    {termsP1
+                      .split('\n')
+                      .map(t => t.trim())
+                      .filter(Boolean)
+                      .map((point, idx) => (
+                        <li key={idx}>{point.replace(/^[•\-\*]\s*/, '')}</li>
+                      ))}
+                  </ul>
+                )}
               </div>
 
             </div>
 
             {/* ====== PAGE 2 ====== */}
             <div className="page-break pt-6 border-t border-dashed border-slate-300 print-page">
-              
+
               {/* General Terms & Conditions - Page 2 continuation */}
               <div className="avoid-break">
-                <ul className="space-y-2 text-xs text-slate-800 list-disc list-outside ml-4 leading-relaxed">
-                  <li>
-                    In the event of roadblocks or route diversions, the vehicle may take an alternative route. Any additional expenses incurred due to such diversions shall be borne by the guest and paid directly on-site.
-                  </li>
-                  <li>
-                    Air conditioning may not function effectively or may be switched off while driving in hilly regions, depending on road and vehicle conditions.
-                  </li>
-                  <li>
-                    In case of delayed arrival, any missed sightseeing for that day will not be the responsibility of FusionStays. If the same sightseeing is to be covered on a subsequent day, additional charges may apply.
-                  </li>
-                  <li>
-                    Any change in PAX will not result in any change in the vehicle type or the confirmed rates.
-                  </li>
-                  <li>
-                    Car Vendor details will be shared before 1 day from Pick Up Date.
-                  </li>
-                  <li>
-                    Due payment will be paid on the day of Pickup.
-                  </li>
-                  <li>
-                    Parking and permit charges, if applicable, are at extra cost.
-                  </li>
-                </ul>
+                {isEditMode ? (
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-amber-800 uppercase">
+                      Page 2 Terms & Conditions (One condition per line):
+                    </label>
+                    <textarea
+                      rows={7}
+                      value={termsP2}
+                      onChange={(e) => setTermsP2(e.target.value)}
+                      className="w-full text-xs p-2 border border-amber-300 rounded-lg bg-amber-50/40 text-slate-800 focus:outline-none"
+                    />
+                  </div>
+                ) : (
+                  <ul className="space-y-2 text-xs text-slate-800 list-disc list-outside ml-4 leading-relaxed">
+                    {termsP2
+                      .split('\n')
+                      .map(t => t.trim())
+                      .filter(Boolean)
+                      .map((point, idx) => (
+                        <li key={idx}>{point.replace(/^[•\-\*]\s*/, '')}</li>
+                      ))}
+                  </ul>
+                )}
               </div>
 
               {/* Inclusions & Exclusions Box Table */}
@@ -563,15 +748,40 @@ const CarVoucherPDFModal = ({ booking, daywise = [], onClose }) => {
                   <tbody>
                     <tr>
                       <td className="border-r border-slate-300 p-3 align-top leading-relaxed text-slate-800">
-                        <p className="mb-2">Vehicle service on a point-to-point basis as per the confirmed itinerary.</p>
-                        <p>Driver accommodation and meals.</p>
+                        {isEditMode ? (
+                          <textarea
+                            rows={4}
+                            value={inclusionsText}
+                            onChange={(e) => setInclusionsText(e.target.value)}
+                            className="w-full text-xs p-2 border border-emerald-300 rounded-lg bg-emerald-50/40 text-slate-800 focus:outline-none"
+                          />
+                        ) : (
+                          inclusionsText
+                            .split('\n')
+                            .map(line => line.trim())
+                            .filter(Boolean)
+                            .map((line, idx) => (
+                              <p key={idx} className="mb-1.5">{line.replace(/^[•\-\*]\s*/, '')}</p>
+                            ))
+                        )}
                       </td>
-                      <td className="p-3 align-top leading-relaxed text-slate-800 space-y-1.5">
-                        <p>Airfare, train fare, or any transportation not specifically mentioned.</p>
-                        <p>Medical expenses, rescue, evacuation, or emergency assistance.</p>
-                        <p>Entry fees, permits, travel insurance, and sightseeing charges unless stated.</p>
-                        <p>Toll taxes, parking, state taxes, and en-route charges unless included.</p>
-                        <p>Additional expenses from political unrest, natural calamities, vehicle breakdowns, or unforeseen events.</p>
+                      <td className="p-3 align-top leading-relaxed text-slate-800">
+                        {isEditMode ? (
+                          <textarea
+                            rows={6}
+                            value={exclusionsText}
+                            onChange={(e) => setExclusionsText(e.target.value)}
+                            className="w-full text-xs p-2 border border-rose-300 rounded-lg bg-rose-50/40 text-slate-800 focus:outline-none"
+                          />
+                        ) : (
+                          exclusionsText
+                            .split('\n')
+                            .map(line => line.trim())
+                            .filter(Boolean)
+                            .map((line, idx) => (
+                              <p key={idx} className="mb-1.5">{line.replace(/^[•\-\*]\s*/, '')}</p>
+                            ))
+                        )}
                       </td>
                     </tr>
                   </tbody>
@@ -636,8 +846,34 @@ const CarVoucherPDFModal = ({ booking, daywise = [], onClose }) => {
               <div className="border-b-2 border-red-500 mt-6 mb-3"></div>
 
               {/* GSTN */}
-              <div className="text-xs font-bold text-slate-900">
-                GSTN : 19AADCF8613N1Z5
+              <div className="text-xs font-bold text-slate-900 flex items-center justify-between">
+                <div>
+                  GSTN :{' '}
+                  {isEditMode ? (
+                    <input
+                      type="text"
+                      value={gstnNo}
+                      onChange={(e) => setGstnNo(e.target.value)}
+                      className="text-xs font-bold border border-amber-300 rounded px-1.5 py-0.5 bg-amber-50/50 focus:outline-none"
+                    />
+                  ) : (
+                    <span>{gstnNo}</span>
+                  )}
+                </div>
+                {isEditMode && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTermsP1(DEFAULT_TERMS_P1);
+                      setTermsP2(DEFAULT_TERMS_P2);
+                      setInclusionsText(DEFAULT_INCLUSIONS);
+                      setExclusionsText(DEFAULT_EXCLUSIONS);
+                    }}
+                    className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-800 font-semibold cursor-pointer underline"
+                  >
+                    <RotateCcw className="w-3 h-3" /> Reset default conditions
+                  </button>
+                )}
               </div>
 
             </div>

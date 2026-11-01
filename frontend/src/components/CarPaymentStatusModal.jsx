@@ -37,20 +37,41 @@ const CarPaymentStatusModal = ({ booking, onClose, onSuccess }) => {
     const fetchAccountData = async () => {
       setIsLoading(true);
       setErrorMsg("");
+
+      // Helper to compute advance to be paid: Purchase Price - Advance Received
+      const computeAdvanceToBePaid = (purchaseVal, advRecVal, secAdvVal) => {
+        const purchase = parseFloat(purchaseVal) || 0;
+        const advReceived = parseFloat(advRecVal) || 0;
+        const secAdv = parseFloat(secAdvVal) || 0;
+        // Total advance required to be paid to vendor = Purchase Price - Advance Received
+        const totalAdv = purchase - advReceived;
+        // Advance to be paid + Secondary Advance = Total Adv, so Advance to be Paid = Total Adv - Secondary Advance
+        return Math.max(0, totalAdv - secAdv);
+      };
+
       try {
         // Fetch specific account entry
         const res = await api.get(`/car-packages/accounts/${encodeURIComponent(vendorwiseId)}`);
         if (res.data && res.data.account) {
           const acc = res.data.account;
+          const purchaseVal = acc["Purchase Price"] || booking?.["Purchase Cost"] || "0";
+          const advRecVal = booking?.["Advance Recieved"] || "0";
+          const secAdvVal = acc["Secondary Advance"] || "";
+
+          let advToBePaid = acc["Advance to be Paid"];
+          if (!advToBePaid || advToBePaid === "0" || advToBePaid === booking?.["Advance Recieved"]) {
+            advToBePaid = String(computeAdvanceToBePaid(purchaseVal, advRecVal, secAdvVal));
+          }
+
           setFormData({
             "Vendorwise ID": acc["Vendorwise ID"] || vendorwiseId,
             "Guest Name": acc["Guest Name"] || booking?.["Guest Name"] || "",
             "Date": acc["Date"] || booking?.["Start Date"] || booking?.["Booking Date"] || "",
             "Car Type": acc["Car Type"] || booking?.["Car Type"] || "",
-            "Purchase Price": acc["Purchase Price"] || booking?.["Purchase Cost"] || "0",
-            "Advance to be Paid": acc["Advance to be Paid"] || booking?.["Advance Recieved"] || "0",
+            "Purchase Price": purchaseVal,
+            "Advance to be Paid": advToBePaid,
             "Advance Status": acc["Advance Status"] || "To be paid",
-            "Secondary Advance": acc["Secondary Advance"] || "",
+            "Secondary Advance": secAdvVal,
             "Secondary Advance Status": acc["Secondary Advance Status"] || "To be paid",
             "Guest Collection": acc["Guest Collection"] || booking?.["Due Collection"] || "",
             "Vendor": acc["Vendor"] || booking?.["Vendor"] || "",
@@ -59,13 +80,17 @@ const CarPaymentStatusModal = ({ booking, onClose, onSuccess }) => {
         }
       } catch (err) {
         // Fallback to booking props if account record doesn't exist yet
+        const purchaseVal = booking?.["Purchase Cost"] || "0";
+        const advRecVal = booking?.["Advance Recieved"] || "0";
+        const initialAdvToBePaid = String(computeAdvanceToBePaid(purchaseVal, advRecVal, 0));
+
         setFormData({
           "Vendorwise ID": vendorwiseId,
           "Guest Name": booking?.["Guest Name"] || "",
           "Date": booking?.["Start Date"] || booking?.["Booking Date"] || "",
           "Car Type": booking?.["Car Type"] || "",
-          "Purchase Price": booking?.["Purchase Cost"] || "0",
-          "Advance to be Paid": booking?.["Advance Recieved"] || "0",
+          "Purchase Price": purchaseVal,
+          "Advance to be Paid": initialAdvToBePaid,
           "Advance Status": booking?.["Advance Status"] || "To be paid",
           "Secondary Advance": "",
           "Secondary Advance Status": "To be paid",
@@ -92,7 +117,25 @@ const CarPaymentStatusModal = ({ booking, onClose, onSuccess }) => {
   }, [vendorwiseId, booking]);
 
   const handleChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      const updated = { ...prev, [field]: value };
+      const advRec = parseFloat(booking?.["Advance Recieved"]) || 0;
+
+      if (field === "Purchase Price") {
+        const purchase = parseFloat(value) || 0;
+        const totalAdv = Math.max(0, purchase - advRec);
+        const secAdv = parseFloat(updated["Secondary Advance"]) || 0;
+        updated["Advance to be Paid"] = String(Math.max(0, totalAdv - secAdv));
+      } else if (field === "Secondary Advance") {
+        const purchase = parseFloat(updated["Purchase Price"]) || 0;
+        const totalAdv = Math.max(0, purchase - advRec);
+        const secAdv = parseFloat(value) || 0;
+        // Advance to be paid + Secondary advance must always equal Purchase Price - Advance Received
+        updated["Advance to be Paid"] = String(Math.max(0, totalAdv - secAdv));
+      }
+
+      return updated;
+    });
   };
 
   const handleSave = async (e) => {
@@ -202,53 +245,68 @@ const CarPaymentStatusModal = ({ booking, onClose, onSuccess }) => {
             </div>
 
             {/* Financial Amounts Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Purchase Price (₹)
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">₹</span>
-                  <input
-                    type="number"
-                    value={formData["Purchase Price"]}
-                    onChange={(e) => handleChange("Purchase Price", e.target.value)}
-                    className="w-full pl-7 pr-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 font-medium"
-                    placeholder="0"
-                  />
+            <div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Purchase Price (₹)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">₹</span>
+                    <input
+                      type="number"
+                      value={formData["Purchase Price"]}
+                      onChange={(e) => handleChange("Purchase Price", e.target.value)}
+                      className="w-full pl-7 pr-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 font-medium"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-slate-700">
+                      Advance to be Paid (₹)
+                    </label>
+                    <span className="text-[10px] text-amber-600 font-semibold">Auto-computed</span>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">₹</span>
+                    <input
+                      type="number"
+                      value={formData["Advance to be Paid"]}
+                      onChange={(e) => handleChange("Advance to be Paid", e.target.value)}
+                      className="w-full pl-7 pr-3 py-2 text-sm border border-amber-300 bg-amber-50/40 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 font-bold text-amber-700"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Guest Collection (₹)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">₹</span>
+                    <input
+                      type="number"
+                      value={formData["Guest Collection"]}
+                      onChange={(e) => handleChange("Guest Collection", e.target.value)}
+                      className="w-full pl-7 pr-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 font-medium text-slate-800"
+                      placeholder="0"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Advance to be Paid (₹)
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">₹</span>
-                  <input
-                    type="number"
-                    value={formData["Advance to be Paid"]}
-                    onChange={(e) => handleChange("Advance to be Paid", e.target.value)}
-                    className="w-full pl-7 pr-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 font-bold text-amber-700"
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Guest Collection (₹)
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">₹</span>
-                  <input
-                    type="number"
-                    value={formData["Guest Collection"]}
-                    onChange={(e) => handleChange("Guest Collection", e.target.value)}
-                    className="w-full pl-7 pr-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 font-medium text-slate-800"
-                    placeholder="0"
-                  />
-                </div>
+              {/* Formula & Balance Guidance */}
+              <div className="mt-2 text-[11px] bg-amber-50/80 border border-amber-200/80 rounded-lg px-3 py-1.5 text-amber-900 flex flex-wrap items-center justify-between gap-1">
+                <span>
+                  <strong>Rule:</strong> Advance to be Paid + Secondary Advance = Purchase Price (₹{formData["Purchase Price"] || 0}) − Advance Received (₹{booking?.["Advance Recieved"] || 0})
+                </span>
+                <span className="font-bold text-amber-800">
+                  = ₹{Math.max(0, (parseFloat(formData["Purchase Price"]) || 0) - (parseFloat(booking?.["Advance Recieved"]) || 0))}
+                </span>
               </div>
             </div>
 
