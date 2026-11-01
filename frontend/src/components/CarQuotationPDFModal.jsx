@@ -67,6 +67,69 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
   const [inclusionsText, setInclusionsText] = useState(DEFAULT_QUOTATION_INCLUSIONS);
   const [exclusionsText, setExclusionsText] = useState(DEFAULT_QUOTATION_EXCLUSIONS);
 
+  // Helper to parse dates like "28-December-2026", "1-January-2027", "28-Dec-2026", "2026-12-28" for sorting
+  const parseDateForSort = (str) => {
+    if (!str) return 0;
+    const cleanStr = String(str).trim();
+    // Try standard Date parse first
+    const parsed = Date.parse(cleanStr);
+    if (!isNaN(parsed)) return parsed;
+
+    // Handle day-MonthName-year (e.g. 28-December-2026 or 1-Jan-2027)
+    const parts = cleanStr.split(/[-/\s]+/);
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10);
+      const monthStr = parts[1];
+      const year = parseInt(parts[2], 10);
+      if (!isNaN(day) && !isNaN(year)) {
+        const testDate = new Date(`${monthStr} ${day}, ${year}`);
+        if (!isNaN(testDate.getTime())) return testDate.getTime();
+      }
+    }
+    return 0;
+  };
+
+  // Editable Itinerary List sorted in ascending order of dates
+  const [itineraryDays, setItineraryDays] = useState(() => {
+    if (daywise && daywise.length > 0) {
+      const sorted = [...daywise].sort((a, b) => {
+        const timeA = parseDateForSort(a["Start Date"] || a["Date"]);
+        const timeB = parseDateForSort(b["Start Date"] || b["Date"]);
+        if (timeA && timeB) return timeA - timeB; // Ascending order
+        return 0;
+      });
+
+      return sorted.map((d, i) => ({
+        date: d["Start Date"] || `Day ${i + 1}`,
+        from: d["From"] || '',
+        to: d["To"] || '',
+        itinerary: d["Itinerary"] || ''
+      }));
+    }
+    return [
+      { date: pickupDate, from: pickupPoint, to: dropPoint, itinerary: 'Point to point transfer and local sightseeing' }
+    ];
+  });
+
+  const handleUpdateItineraryDay = (index, field, value) => {
+    setItineraryDays(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const handleAddItineraryDay = () => {
+    setItineraryDays(prev => [
+      ...prev,
+      { date: `Day ${prev.length + 1}`, from: '', to: '', itinerary: '' }
+    ]);
+  };
+
+  const handleRemoveItineraryDay = (index) => {
+    setItineraryDays(prev => prev.filter((_, i) => i !== index));
+  };
+
   // Current formatted quotation date
   const [quotationDate, setQuotationDate] = useState(
     new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -346,13 +409,13 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
         {/* Modal Top Bar */}
         <div className="px-4 py-3 sm:px-6 sm:py-4 bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 no-print">
           <div className="flex items-center gap-3">
-            <div className="p-2 sm:p-2.5 bg-brand-500/20 text-brand-400 rounded-xl">
-              <Printer className="w-5 h-5 text-amber-400" />
+            <div className="p-2 sm:p-2.5 bg-red-500/20 text-red-400 rounded-xl">
+              <Printer className="w-5 h-5 text-red-500" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-base sm:text-lg text-white">Car Booking Quotation PDF</h3>
-                <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                <span className="bg-red-500/20 text-red-300 border border-red-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">
                   2 Pages
                 </span>
               </div>
@@ -369,19 +432,19 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
               onClick={() => setIsEditMode(!isEditMode)}
               className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border transition-all active:scale-95 cursor-pointer ${
                 isEditMode
-                  ? 'bg-amber-500 text-slate-900 border-amber-400 shadow-md ring-2 ring-amber-400/50'
+                  ? 'bg-red-600 text-white border-red-500 shadow-md ring-2 ring-red-500/50'
                   : 'bg-slate-800 text-slate-200 hover:text-white hover:bg-slate-700 border-slate-700'
               }`}
               title="Edit quotation guest info, pickup/drop, amounts, general terms, inclusions, and exclusions"
             >
               {isEditMode ? (
                 <>
-                  <Check className="w-4 h-4 text-slate-900" />
+                  <Check className="w-4 h-4 text-white" />
                   <span>Finish Editing</span>
                 </>
               ) : (
                 <>
-                  <Edit3 className="w-4 h-4 text-amber-400" />
+                  <Edit3 className="w-4 h-4 text-red-400" />
                   <span>Edit Quotation & Terms</span>
                 </>
               )}
@@ -390,7 +453,7 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
             <button
               onClick={handlePrint}
               disabled={isGenerating}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-xs font-bold rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-red-700 to-rose-700 hover:from-red-800 hover:to-rose-800 text-white text-xs font-bold rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
               title="Download all pages as PDF by selecting 'Save as PDF' in the destination dropdown"
             >
               {isGenerating ? (
@@ -419,23 +482,23 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
         <div className="pdf-modal-content p-2 sm:p-6 md:p-10 overflow-y-auto overflow-x-auto flex-1 bg-slate-200/80 custom-scrollbar flex flex-col items-center w-full">
           
           {/* Download helper banner */}
-          <div className="mb-4 bg-amber-50 border border-amber-200/80 rounded-xl p-2.5 sm:p-3 text-xs text-amber-900 flex items-center justify-between gap-2 sm:gap-3 no-print max-w-[800px] w-full shadow-sm">
+          <div className="mb-4 bg-red-50 border border-red-200/80 rounded-xl p-2.5 sm:p-3 text-xs text-red-950 flex items-center justify-between gap-2 sm:gap-3 no-print max-w-[800px] w-full shadow-sm">
             <div className="flex items-center gap-2">
               <span className="text-sm sm:text-base">📄</span>
               <span className="text-[11px] sm:text-xs">
                 {isEditMode ? (
-                  <strong className="text-amber-800">Edit Mode Active: You can edit guest details, pickup/drop, amounts, terms, inclusions, and exclusions directly below.</strong>
+                  <strong className="text-red-900">Edit Mode Active: You can edit guest details, pickup/drop, amounts, terms, inclusions, and exclusions directly below.</strong>
                 ) : (
                   <><strong>Multi-Page PDF Ready:</strong> Page 1 (Booking & Itinerary) & Page 2 (Terms & Policies). Click "Edit Quotation & Terms" to edit before printing/saving.</>
                 )}
               </span>
             </div>
             {isEditMode ? (
-              <span className="text-[10px] sm:text-[11px] text-amber-900 bg-amber-200/80 font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg whitespace-nowrap flex items-center gap-1">
+              <span className="text-[10px] sm:text-[11px] text-white bg-red-700 font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg whitespace-nowrap flex items-center gap-1">
                 <Edit3 className="w-3 h-3" /> Editing
               </span>
             ) : (
-              <span className="text-[10px] sm:text-[11px] text-amber-800 bg-amber-200/60 font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg whitespace-nowrap">
+              <span className="text-[10px] sm:text-[11px] text-red-800 bg-red-100 font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg whitespace-nowrap">
                 2 Pages
               </span>
             )}
@@ -461,7 +524,7 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
                 </div>
 
                 <div className="text-right">
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-amber-700">
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-red-700">
                     CAR BOOKING QUOTATION
                   </h2>
                   <p className="text-xs text-slate-500 font-medium mt-1">
@@ -479,7 +542,7 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
                       type="text"
                       value={guestName}
                       onChange={(e) => setGuestName(e.target.value)}
-                      className="text-sm font-semibold border border-amber-300 rounded px-1.5 py-0.5 bg-amber-50/50 focus:outline-none"
+                      className="text-sm font-semibold border border-red-300 rounded px-1.5 py-0.5 bg-red-50/50 focus:outline-none"
                     />
                   ) : (
                     <span>{guestName}</span>
@@ -491,9 +554,9 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
                 </p>
               </div>
 
-              {/* Quotation Validity Banner */}
-              <div className="mt-5 p-3 rounded-lg bg-amber-500 text-white flex items-center justify-center gap-2 shadow-sm">
-                <AlertTriangle className="w-4 h-4 text-amber-200 flex-shrink-0" />
+              {/* Quotation Validity Banner - Blood Red */}
+              <div className="mt-5 p-3 rounded-lg bg-red-700 text-white flex items-center justify-center gap-2 shadow-sm">
+                <AlertTriangle className="w-4 h-4 text-red-200 flex-shrink-0" />
                 <span className="text-xs font-bold text-center">
                   Quotation Validity: Valid for 48 hours from the time of issuance. Prices and availability are subject to change thereafter.
                 </span>
@@ -501,7 +564,7 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
 
               {/* Booking Details Section */}
               <div className="mt-8 avoid-break">
-                <h3 className="text-sm font-extrabold uppercase tracking-widest text-slate-900 pb-1.5 border-b-2 border-amber-600">
+                <h3 className="text-sm font-extrabold uppercase tracking-widest text-slate-900 pb-1.5 border-b-2 border-red-700">
                   BOOKING DETAILS
                 </h3>
 
@@ -635,14 +698,14 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
                           type="text"
                           value={totalAmount}
                           onChange={(e) => setTotalAmount(e.target.value)}
-                          className="w-24 text-xs font-black text-amber-700 border border-amber-300 rounded px-1.5 py-0.5 bg-amber-50/50 focus:outline-none text-right"
+                          className="w-24 text-xs font-black text-red-700 border border-red-300 rounded px-1.5 py-0.5 bg-red-50/50 focus:outline-none text-right"
                         />
                       </div>
                     ) : (
-                      <span className="text-amber-700 font-black text-sm">₹{totalAmount}/-</span>
+                      <span className="text-red-700 font-black text-sm">₹{totalAmount}/-</span>
                     )}
                   </div>
-                  <div className="p-3 bg-amber-50 font-bold text-slate-900 flex justify-between items-center">
+                  <div className="p-3 bg-red-50 font-bold text-slate-900 flex justify-between items-center">
                     <span>Advance Amount</span>
                     {isEditMode ? (
                       <div className="flex items-center gap-1">
@@ -651,11 +714,11 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
                           type="text"
                           value={advanceAmount}
                           onChange={(e) => setAdvanceAmount(e.target.value)}
-                          className="w-24 text-xs font-black text-amber-700 border border-amber-300 rounded px-1.5 py-0.5 bg-amber-50/50 focus:outline-none text-right"
+                          className="w-24 text-xs font-black text-red-700 border border-red-300 rounded px-1.5 py-0.5 bg-red-50/50 focus:outline-none text-right"
                         />
                       </div>
                     ) : (
-                      <span className="text-amber-700 font-black text-sm">₹{advanceAmount}/-</span>
+                      <span className="text-red-700 font-black text-sm">₹{advanceAmount}/-</span>
                     )}
                   </div>
                 </div>
@@ -663,23 +726,98 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
 
               {/* Itinerary Section */}
               <div className="mt-8">
-                <h3 className="text-sm font-extrabold uppercase tracking-widest text-slate-900 pb-1.5 border-b-2 border-amber-600">
-                  ITINERARY
-                </h3>
+                <div className="flex items-center justify-between pb-1.5 border-b-2 border-red-700">
+                  <h3 className="text-sm font-extrabold uppercase tracking-widest text-slate-900">
+                    ITINERARY
+                  </h3>
+                  {isEditMode && (
+                    <button
+                      type="button"
+                      onClick={handleAddItineraryDay}
+                      className="text-[10px] bg-red-50 hover:bg-red-100 text-red-800 font-bold px-2 py-0.5 rounded border border-red-300 transition-colors cursor-pointer"
+                    >
+                      + Add Day
+                    </button>
+                  )}
+                </div>
 
                 <div className="mt-4 space-y-3 text-xs leading-relaxed text-slate-700">
-                  {daywise && daywise.length > 0 ? (
-                    daywise.map((day, idx) => (
-                      <div key={idx} className="flex gap-2">
-                        <span className="font-bold text-slate-900 whitespace-nowrap">
-                          {day["Start Date"] || `Day ${idx + 1}`} –
-                        </span>
-                        <span>
-                          {day["From"] && day["To"] ? `${day["From"]} to ${day["To"]}: ` : ''}
-                          {day["Itinerary"]}
-                        </span>
-                      </div>
-                    ))
+                  {itineraryDays && itineraryDays.length > 0 ? (
+                    itineraryDays.map((day, idx) => {
+                      const dateStr = day.date || `Day ${idx + 1}`;
+                      const route = (day.from && day.to) ? `${day.from} to ${day.to}: ` : '';
+
+                      if (isEditMode) {
+                        return (
+                          <div key={idx} className="p-2 border border-amber-300 rounded-lg bg-amber-50/40 space-y-1.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5 flex-1">
+                                <span className="font-bold text-[11px] text-slate-700 whitespace-nowrap">Date/Day:</span>
+                                <input
+                                  type="text"
+                                  value={day.date}
+                                  onChange={(e) => handleUpdateItineraryDay(idx, 'date', e.target.value)}
+                                  className="w-36 text-xs font-bold border border-amber-300 rounded px-1.5 py-0.5 bg-white focus:outline-none"
+                                  placeholder="e.g. Day 1 / 21st Oct"
+                                />
+                              </div>
+
+                              <div className="flex items-center gap-1.5 flex-1">
+                                <span className="font-bold text-[11px] text-slate-700 whitespace-nowrap">Route:</span>
+                                <input
+                                  type="text"
+                                  value={day.from}
+                                  onChange={(e) => handleUpdateItineraryDay(idx, 'from', e.target.value)}
+                                  className="w-24 text-xs border border-amber-300 rounded px-1.5 py-0.5 bg-white focus:outline-none"
+                                  placeholder="From"
+                                />
+                                <span className="text-slate-400">to</span>
+                                <input
+                                  type="text"
+                                  value={day.to}
+                                  onChange={(e) => handleUpdateItineraryDay(idx, 'to', e.target.value)}
+                                  className="w-24 text-xs border border-amber-300 rounded px-1.5 py-0.5 bg-white focus:outline-none"
+                                  placeholder="To"
+                                />
+                              </div>
+
+                              {itineraryDays.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveItineraryDay(idx)}
+                                  className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 text-[11px] font-bold px-1.5 py-0.5 rounded cursor-pointer"
+                                  title="Remove day"
+                                >
+                                  ✕
+                                </button>
+                              )}
+                            </div>
+
+                            <div>
+                              <textarea
+                                rows={2}
+                                value={day.itinerary}
+                                onChange={(e) => handleUpdateItineraryDay(idx, 'itinerary', e.target.value)}
+                                className="w-full text-xs border border-amber-300 rounded p-1.5 bg-white focus:outline-none leading-relaxed"
+                                placeholder="Sightseeing spots, pickup/drop, and schedule details..."
+                              />
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div key={idx} className="flex gap-2">
+                          <span className="font-bold text-slate-900 whitespace-nowrap">
+                            {dateStr} –
+                          </span>
+                          <span>
+                            {route}
+                            {day.itinerary}
+                          </span>
+                        </div>
+                      );
+                    })
                   ) : (
                     <div className="p-3 bg-slate-50 rounded-lg italic text-slate-500">
                       Standard point-to-point transfers and local sightseeing included as per booking schedule.
@@ -697,7 +835,7 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
                   <button
                     type="button"
                     onClick={() => setIsEditingNotes(prev => !prev)}
-                    className="no-print flex items-center gap-1.5 text-[11px] font-bold text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 px-2.5 py-1 rounded-lg transition-all cursor-pointer shadow-2xs active:scale-95"
+                    className="no-print flex items-center gap-1.5 text-[11px] font-bold text-red-700 hover:text-red-800 bg-red-50 hover:bg-red-100 border border-red-300 px-2.5 py-1 rounded-lg transition-all cursor-pointer shadow-2xs active:scale-95"
                     title={isEditingNotes ? "Finish editing notes" : "Click to edit additional notes"}
                   >
                     {isEditingNotes ? (
@@ -707,7 +845,7 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
                       </>
                     ) : (
                       <>
-                        <Edit3 className="w-3.5 h-3.5 text-amber-600" />
+                        <Edit3 className="w-3.5 h-3.5 text-red-600" />
                         <span>Edit Notes</span>
                       </>
                     )}
@@ -715,15 +853,15 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
                 </div>
 
                 {isEditingNotes && (
-                  <div className="mt-2 mb-3 p-3 bg-amber-50/70 border-2 border-amber-300 rounded-xl space-y-2 no-print">
+                  <div className="mt-2 mb-3 p-3 bg-red-50/70 border-2 border-red-300 rounded-xl space-y-2 no-print">
                     <div className="flex items-center justify-between">
-                      <label className="text-[11px] font-bold text-amber-900">
+                      <label className="text-[11px] font-bold text-red-900">
                         Customize Notes (Each line will become a bullet point on the PDF):
                       </label>
                       <button
                         type="button"
                         onClick={() => setNotesText(DEFAULT_ADDITIONAL_NOTES)}
-                        className="flex items-center gap-1 text-[10px] font-semibold text-slate-500 hover:text-amber-800 underline cursor-pointer"
+                        className="flex items-center gap-1 text-[10px] font-semibold text-slate-500 hover:text-red-800 underline cursor-pointer"
                       >
                         <RotateCcw className="w-3 h-3" />
                         Reset Default
@@ -735,14 +873,14 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
                       onChange={(e) => setNotesText(e.target.value)}
                       rows={4}
                       placeholder="Enter notes (each line will be a separate bullet point)..."
-                      className="w-full text-xs p-2.5 border border-amber-300 rounded-lg bg-white text-slate-800 font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none leading-relaxed"
+                      className="w-full text-xs p-2.5 border border-red-300 rounded-lg bg-white text-slate-800 font-medium focus:ring-2 focus:ring-red-500 focus:outline-none leading-relaxed"
                     />
 
                     <div className="flex justify-end">
                       <button
                         type="button"
                         onClick={() => setIsEditingNotes(false)}
-                        className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg transition-all shadow-xs cursor-pointer flex items-center gap-1"
+                        className="px-3 py-1 bg-red-700 hover:bg-red-800 text-white text-xs font-bold rounded-lg transition-all shadow-xs cursor-pointer flex items-center gap-1"
                       >
                         <Check className="w-3.5 h-3.5" />
                         Apply & Save
@@ -754,7 +892,7 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
                 <div 
                   onClick={() => !isEditingNotes && setIsEditingNotes(true)}
                   className={`mt-2 text-[11px] text-slate-600 font-medium space-y-1 rounded-lg p-1.5 transition-all ${
-                    !isEditingNotes ? 'hover:bg-amber-50/70 hover:ring-1 hover:ring-amber-300/80 cursor-pointer' : ''
+                    !isEditingNotes ? 'hover:bg-red-50/70 hover:ring-1 hover:ring-red-300/80 cursor-pointer' : ''
                   }`}
                   title={!isEditingNotes ? "Click to edit additional notes" : ""}
                 >
@@ -789,7 +927,7 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
 
               {/* General Terms & Conditions */}
               <div className="avoid-break">
-                <div className="flex items-center justify-between pb-1.5 border-b-2 border-amber-600">
+                <div className="flex items-center justify-between pb-1.5 border-b-2 border-red-700">
                   <h3 className="text-sm font-extrabold uppercase tracking-widest text-slate-900">
                     GENERAL TERMS & CONDITIONS
                   </h3>
@@ -801,7 +939,7 @@ const CarQuotationPDFModal = ({ booking, daywise = [], onClose }) => {
                         setInclusionsText(DEFAULT_QUOTATION_INCLUSIONS);
                         setExclusionsText(DEFAULT_QUOTATION_EXCLUSIONS);
                       }}
-                      className="flex items-center gap-1 text-[11px] text-amber-700 hover:text-amber-900 font-semibold cursor-pointer underline"
+                      className="flex items-center gap-1 text-[11px] text-red-700 hover:text-red-900 font-semibold cursor-pointer underline"
                     >
                       <RotateCcw className="w-3 h-3" /> Reset default terms
                     </button>

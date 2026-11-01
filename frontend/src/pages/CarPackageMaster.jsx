@@ -333,7 +333,7 @@ const CarPackageMaster = () => {
           </div>
 
           {/* Status Metric Cards Filter */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+          <div className="flex md:grid md:grid-cols-5 gap-2.5 sm:gap-3 overflow-x-auto pb-1.5 md:pb-0 custom-scrollbar">
             {STATUS_LIST.map((st) => {
               const count = statusCounts[st] || 0;
               const isSelected = statusFilter.toLowerCase() === st.toLowerCase();
@@ -341,7 +341,7 @@ const CarPackageMaster = () => {
                 <button
                   key={st}
                   onClick={() => setStatusFilter(isSelected ? 'all' : st)}
-                  className={`p-3.5 rounded-2xl border text-left transition-all active:scale-95 flex flex-col justify-between ${
+                  className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border text-left transition-all active:scale-95 flex flex-col justify-between flex-shrink-0 min-w-[140px] md:min-w-0 ${
                     isSelected
                       ? 'bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-brand-500'
                       : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200 shadow-xs'
@@ -366,31 +366,31 @@ const CarPackageMaster = () => {
           </div>
 
           {/* Search & Filter Toolbar */}
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
+          <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
             
             {/* Search Input */}
-            <div className="relative w-full md:w-96">
+            <div className="relative w-full lg:w-80 flex-shrink-0">
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search Team Member, Guest, Contact, Booking ID..."
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all"
+                className="w-full pl-10 pr-4 py-2 bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all"
               />
             </div>
 
             {/* Filters */}
-            <div className="flex items-center gap-2.5 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+            <div className="flex flex-wrap lg:flex-nowrap items-center gap-2 sm:gap-2.5 w-full lg:w-auto overflow-x-auto pb-1 lg:pb-0">
               
               {/* Status filter dropdown */}
-              <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700">
-                <Clock className="w-3.5 h-3.5 text-slate-400" />
-                <span>Status:</span>
+              <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 flex-shrink-0">
+                <Clock className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                <span className="text-[11px] text-slate-500">Status:</span>
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="bg-transparent text-slate-900 font-bold focus:outline-none cursor-pointer"
+                  className="bg-transparent text-slate-900 font-bold focus:outline-none cursor-pointer max-w-[110px] truncate"
                 >
                   <option value="all">All Statuses</option>
                   {STATUS_LIST.map(st => (
@@ -400,15 +400,15 @@ const CarPackageMaster = () => {
               </div>
 
               {/* Handled By (Name) filter */}
-              <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700">
-                <User className="w-3.5 h-3.5 text-slate-400" />
-                <span>Handled By:</span>
+              <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 flex-shrink-0">
+                <User className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                <span className="text-[11px] text-slate-500">Handled:</span>
                 <select
                   value={nameFilter}
                   onChange={(e) => setNameFilter(e.target.value)}
-                  className="bg-transparent text-slate-900 font-bold focus:outline-none cursor-pointer"
+                  className="bg-transparent text-slate-900 font-bold focus:outline-none cursor-pointer max-w-[110px] truncate"
                 >
-                  <option value="all">All Team Members</option>
+                  <option value="all">All Members</option>
                   {uniqueNames.map(n => (
                     <option key={n} value={n}>{n}</option>
                   ))}
@@ -416,13 +416,13 @@ const CarPackageMaster = () => {
               </div>
 
               {/* Month filter */}
-              <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700">
-                <Filter className="w-3.5 h-3.5 text-slate-400" />
-                <span>Month:</span>
+              <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 flex-shrink-0">
+                <Filter className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                <span className="text-[11px] text-slate-500">Month:</span>
                 <select
                   value={monthFilter}
                   onChange={(e) => setMonthFilter(e.target.value)}
-                  className="bg-transparent text-slate-900 font-bold focus:outline-none cursor-pointer"
+                  className="bg-transparent text-slate-900 font-bold focus:outline-none cursor-pointer max-w-[100px] truncate"
                 >
                   <option value="all">All Months</option>
                   <option value="Aug">August</option>
@@ -434,13 +434,13 @@ const CarPackageMaster = () => {
               </div>
 
               {/* City filter */}
-              <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700">
-                <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                <span>City:</span>
+              <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 flex-shrink-0">
+                <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                <span className="text-[11px] text-slate-500">City:</span>
                 <select
                   value={cityFilter}
                   onChange={(e) => setCityFilter(e.target.value)}
-                  className="bg-transparent text-slate-900 font-bold focus:outline-none cursor-pointer"
+                  className="bg-transparent text-slate-900 font-bold focus:outline-none cursor-pointer max-w-[110px] truncate"
                 >
                   <option value="all">All Cities</option>
                   {uniqueCities.map(c => (
@@ -458,7 +458,7 @@ const CarPackageMaster = () => {
                     setNameFilter('all');
                     setStatusFilter('all');
                   }}
-                  className="text-xs text-rose-600 hover:text-rose-700 font-bold px-2 py-1"
+                  className="text-xs text-rose-600 hover:text-rose-700 font-bold px-2 py-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer flex-shrink-0"
                 >
                   Reset
                 </button>

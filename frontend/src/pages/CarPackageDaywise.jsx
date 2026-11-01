@@ -132,86 +132,85 @@ const CarPackageDaywise = () => {
       <main className="flex-1 flex flex-col min-w-0 overflow-y-auto custom-scrollbar">
         
         {/* Top Header */}
-        <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 py-3 sm:px-6 sm:py-4 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 shadow-sm">
-          <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-3.5 py-3 sm:px-6 sm:py-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-start sm:items-center gap-2.5 sm:gap-3">
             <button
               onClick={() => setIsSidebarOpen(prev => !prev)}
-              className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all shadow-sm active:scale-95"
+              className="p-2 mt-0.5 sm:mt-0 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all shadow-xs active:scale-95 flex-shrink-0"
               title="Toggle Navigation Menu"
             >
-              <div className="flex flex-col gap-1 w-5">
+              <div className="flex flex-col gap-1 w-4.5 sm:w-5">
                 <span className="h-0.5 w-full bg-slate-700 rounded-full"></span>
-                <span className="h-0.5 w-4 bg-slate-700 rounded-full"></span>
+                <span className="h-0.5 w-3.5 sm:w-4 bg-slate-700 rounded-full"></span>
                 <span className="h-0.5 w-full bg-slate-700 rounded-full"></span>
               </div>
             </button>
-            <div>
-              <div className="flex items-center gap-2 text-xs font-bold text-brand-600 uppercase tracking-wider mb-0.5 sm:mb-1">
-                <Calendar className="w-4 h-4" />
-                Operations & Itinerary Tracker
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-brand-600 uppercase tracking-wider mb-0.5">
+                <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>Operations & Itinerary Tracker</span>
               </div>
-              <h1 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">
+              <h1 className="text-base sm:text-2xl font-black text-slate-900 tracking-tight truncate">
                 Daywise Car Details
               </h1>
-              <p className="text-[11px] sm:text-xs text-slate-500 font-medium">
+              <p className="text-[11px] sm:text-xs text-slate-500 font-medium truncate sm:whitespace-normal">
                 Track daily vehicle dispatches, vendor assignments, sightseeing routes, and pickup schedules.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto">
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-xs shadow-md shadow-brand-600/20 transition-all active:scale-95"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-xs shadow-md shadow-brand-600/20 transition-all active:scale-95 whitespace-nowrap cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 flex-shrink-0" />
               <span>New Car Booking</span>
             </button>
 
             <button
               onClick={handleSync}
               disabled={isSyncing}
-              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 ${
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all active:scale-95 whitespace-nowrap cursor-pointer ${
                 isSyncing 
                   ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
                   : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-slate-300'
               }`}
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-brand-600' : 'text-slate-500'}`} />
+              <RefreshCw className={`w-3.5 h-3.5 flex-shrink-0 ${isSyncing ? 'animate-spin text-brand-600' : 'text-slate-500'}`} />
               <span>{isSyncing ? 'Syncing...' : 'Sync Sheet'}</span>
             </button>
           </div>
         </header>
 
-
         <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
           
           {/* Filters Bar */}
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
+          <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
             
             {/* Search Input */}
-            <div className="relative w-full md:w-80">
+            <div className="relative w-full lg:w-72 xl:w-80 flex-shrink-0">
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search Guest, Vendor, Route, Itinerary..."
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all"
+                className="w-full pl-10 pr-4 py-2 bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all"
               />
             </div>
 
-            {/* Filter Pills */}
-            <div className="flex items-center gap-2.5 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+            {/* Filter Pills with Horizontal Scroll on Mobile */}
+            <div className="flex flex-wrap lg:flex-nowrap items-center gap-2 sm:gap-2.5 w-full lg:w-auto overflow-x-auto pb-1 lg:pb-0">
               
               {/* Vendor Filter */}
-              <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700">
-                <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                <span>Vendor:</span>
+              <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 flex-shrink-0">
+                <Building2 className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                <span className="text-slate-500 text-[11px]">Vendor:</span>
                 <select
                   value={vendorFilter}
                   onChange={(e) => setVendorFilter(e.target.value)}
-                  className="bg-transparent text-slate-900 font-bold focus:outline-none cursor-pointer"
+                  className="bg-transparent text-slate-900 font-bold focus:outline-none cursor-pointer max-w-[120px] truncate"
                 >
                   <option value="all">All Vendors</option>
                   {filters.vendors.map(v => (
@@ -221,13 +220,13 @@ const CarPackageDaywise = () => {
               </div>
 
               {/* Car Type Filter */}
-              <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700">
-                <Car className="w-3.5 h-3.5 text-slate-400" />
-                <span>Car Type:</span>
+              <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 flex-shrink-0">
+                <Car className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                <span className="text-slate-500 text-[11px]">Car Type:</span>
                 <select
                   value={carTypeFilter}
                   onChange={(e) => setCarTypeFilter(e.target.value)}
-                  className="bg-transparent text-slate-900 font-bold focus:outline-none cursor-pointer"
+                  className="bg-transparent text-slate-900 font-bold focus:outline-none cursor-pointer max-w-[130px] truncate"
                 >
                   <option value="all">All Vehicle Types</option>
                   {filters.carTypes.map(c => (
@@ -237,15 +236,15 @@ const CarPackageDaywise = () => {
               </div>
 
               {/* Name / User Filter */}
-              <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700">
-                <User className="w-3.5 h-3.5 text-slate-400" />
-                <span>Handled By:</span>
+              <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 flex-shrink-0">
+                <User className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                <span className="text-slate-500 text-[11px]">Handled:</span>
                 <select
                   value={nameFilter}
                   onChange={(e) => setNameFilter(e.target.value)}
-                  className="bg-transparent text-slate-900 font-bold focus:outline-none cursor-pointer"
+                  className="bg-transparent text-slate-900 font-bold focus:outline-none cursor-pointer max-w-[120px] truncate"
                 >
-                  <option value="all">All Team Members</option>
+                  <option value="all">All Members</option>
                   {(filters.names || []).map(n => (
                     <option key={n} value={n}>{n}</option>
                   ))}
@@ -253,14 +252,14 @@ const CarPackageDaywise = () => {
               </div>
 
               {/* Date Input Filter with Calendar */}
-              <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700">
-                <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                <span>Date:</span>
+              <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 flex-shrink-0">
+                <Calendar className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                <span className="text-slate-500 text-[11px]">Date:</span>
                 <input
                   type="date"
                   value={dateFilter}
                   onChange={(e) => setDateFilter(e.target.value)}
-                  className="bg-transparent text-slate-900 font-bold focus:outline-none cursor-pointer"
+                  className="bg-transparent text-slate-900 font-bold focus:outline-none cursor-pointer text-xs"
                 />
               </div>
 
@@ -273,7 +272,7 @@ const CarPackageDaywise = () => {
                     setNameFilter('all');
                     setDateFilter('');
                   }}
-                  className="text-xs text-rose-600 hover:text-rose-700 font-bold px-2 py-1"
+                  className="text-xs text-rose-600 hover:text-rose-700 font-bold px-2 py-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer flex-shrink-0"
                 >
                   Reset
                 </button>
@@ -284,25 +283,25 @@ const CarPackageDaywise = () => {
           </div>
 
           {/* Daywise Table */}
-          <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
             {/* Mobile swipe helper */}
             <div className="md:hidden px-3.5 py-2 bg-slate-50 border-b border-slate-200 text-[11px] text-slate-500 flex items-center justify-between font-medium">
-              <span>👉 Swipe table horizontally to view daily schedules & routes</span>
+              <span>👉 Swipe table to view routes, dispatches & itinerary</span>
               <span className="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-bold">8 cols</span>
             </div>
 
             <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full text-left text-xs border-collapse min-w-[850px]">
+              <table className="w-full text-left text-xs border-collapse min-w-[1100px]">
                 <thead>
                   <tr className="bg-slate-50/90 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                    <th className="py-3 px-3 w-28 whitespace-nowrap">Handled By</th>
-                    <th className="py-3 px-3 w-32 whitespace-nowrap">Date</th>
-                    <th className="py-3 px-3 w-44 whitespace-nowrap">Booking & Guest</th>
-                    <th className="py-3 px-3 w-36 whitespace-nowrap">Route</th>
-                    <th className="py-3 px-3 w-28 whitespace-nowrap">Vehicle</th>
-                    <th className="py-3 px-3 w-28 whitespace-nowrap">Vendor</th>
-                    <th className="py-3 px-3 min-w-[200px]">Day Itinerary & Sightseeing</th>
-                    <th className="py-3 px-3 w-28 text-center whitespace-nowrap">Actions</th>
+                    <th className="py-3 px-3 w-[100px] whitespace-nowrap">Handled By</th>
+                    <th className="py-3 px-3 w-[130px] whitespace-nowrap">Date</th>
+                    <th className="py-3 px-3 w-[220px]">Booking & Guest</th>
+                    <th className="py-3 px-3 w-[150px] whitespace-nowrap">Route</th>
+                    <th className="py-3 px-3 w-[110px] whitespace-nowrap">Vehicle</th>
+                    <th className="py-3 px-3 w-[120px] whitespace-nowrap">Vendor</th>
+                    <th className="py-3 px-3 min-w-[220px]">Day Itinerary & Sightseeing</th>
+                    <th className="py-3 px-3 w-[130px] text-center whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
 
@@ -329,9 +328,9 @@ const CarPackageDaywise = () => {
                       <tr key={idx} className="hover:bg-slate-50/80 transition-colors group">
                         
                         {/* Handled By (Name column from sheet) */}
-                        <td className="py-2.5 px-3 whitespace-nowrap">
+                        <td className="py-2.5 px-3 w-[100px] whitespace-nowrap">
                           {r["Name"] ? (
-                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-2xs">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-2xs">
                               <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
                               <span className="truncate max-w-[80px]" title={r["Name"]}>{r["Name"]}</span>
                             </span>
@@ -341,7 +340,7 @@ const CarPackageDaywise = () => {
                         </td>
                         
                         {/* Date */}
-                        <td className="py-2.5 px-3 whitespace-nowrap">
+                        <td className="py-2.5 px-3 w-[130px] whitespace-nowrap">
                           <div className="font-bold text-slate-800 text-[11px] flex items-center gap-1.5">
                             <Calendar className="w-3.5 h-3.5 text-brand-600 flex-shrink-0" />
                             <span>{r["Start Date"]}</span>
@@ -349,16 +348,18 @@ const CarPackageDaywise = () => {
                         </td>
 
                         {/* Booking & Guest */}
-                        <td className="py-2.5 px-3">
-                          <div className="font-bold text-slate-900 text-xs flex items-center gap-1 truncate" title={r["Guest Name"]}>
-                            <User className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                            <span className="truncate">{r["Guest Name"]}</span>
+                        <td className="py-2.5 px-3 w-[220px]">
+                          <div className="font-bold text-slate-900 text-xs flex items-start gap-1">
+                            <User className="w-3.5 h-3.5 text-slate-400 flex-shrink-0 mt-0.5" />
+                            <span className="line-clamp-2 leading-tight" title={r["Guest Name"]}>
+                              {r["Guest Name"]}
+                            </span>
                           </div>
-                          <div className="text-[10px] text-slate-500 font-mono flex items-center gap-2 mt-0.5">
+                          <div className="text-[10px] text-slate-500 font-mono flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 pl-4.5">
                             <span className="text-slate-400">{r["Booking ID"] || r["Vendorwise ID"]}</span>
                             {r["Contact No"] && (
-                              <span className="flex items-center gap-0.5 text-slate-500">
-                                <Phone className="w-2.5 h-2.5 text-slate-400" />
+                              <span className="flex items-center gap-0.5 text-slate-500 whitespace-nowrap">
+                                <Phone className="w-2.5 h-2.5 text-slate-400 flex-shrink-0" />
                                 {r["Contact No"]}
                               </span>
                             )}
@@ -366,11 +367,11 @@ const CarPackageDaywise = () => {
                         </td>
 
                         {/* Route (From -> To) */}
-                        <td className="py-2.5 px-3 whitespace-nowrap">
+                        <td className="py-2.5 px-3 w-[150px] whitespace-nowrap">
                           <div className="flex items-center gap-1 font-bold text-slate-800 bg-slate-100 px-2 py-1 rounded-md text-[11px] w-fit">
-                            <span className="truncate max-w-[65px]" title={r["From"] || "Start"}>{r["From"] || "Start"}</span>
+                            <span className="truncate max-w-[55px]" title={r["From"] || "Start"}>{r["From"] || "Start"}</span>
                             <ArrowRight className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                            <span className="truncate max-w-[65px]" title={r["To"] || "End"}>{r["To"] || "End"}</span>
+                            <span className="truncate max-w-[55px]" title={r["To"] || "End"}>{r["To"] || "End"}</span>
                           </div>
                         </td>
 
@@ -378,7 +379,7 @@ const CarPackageDaywise = () => {
                         <td className="py-2.5 px-3 whitespace-nowrap">
                           <div className="font-bold text-slate-900 text-[11px] flex items-center gap-1">
                             <Car className="w-3 h-3 text-brand-600 flex-shrink-0" />
-                            <span className="truncate max-w-[80px]" title={r["Car Type"]}>{r["Car Type"] || "Car"}</span>
+                            <span className="truncate max-w-[90px]" title={r["Car Type"]}>{r["Car Type"] || "Car"}</span>
                           </div>
                           <div className="text-[10px] text-slate-500 font-semibold">
                             Qty: <span className="text-brand-600 font-bold">{r["No of Cars"] || 1}</span>
@@ -389,13 +390,13 @@ const CarPackageDaywise = () => {
                         <td className="py-2.5 px-3 whitespace-nowrap">
                           <div className="font-semibold text-slate-800 flex items-center gap-1 bg-brand-50/70 text-brand-900 px-2 py-0.5 rounded-md text-[10px] w-fit" title={r["Vendor"]}>
                             <Building2 className="w-3 h-3 text-brand-600 flex-shrink-0" />
-                            <span className="truncate max-w-[85px]">{r["Vendor"] || "Direct"}</span>
+                            <span className="truncate max-w-[95px]">{r["Vendor"] || "Direct"}</span>
                           </div>
                         </td>
 
                         {/* Itinerary */}
                         <td className="py-2.5 px-3 text-slate-700">
-                          <p className="text-[11px] leading-snug line-clamp-2 max-w-xl" title={r["Itinerary"]}>
+                          <p className="text-[11px] leading-snug line-clamp-2" title={r["Itinerary"]}>
                             {r["Itinerary"] || "No specific itinerary provided."}
                           </p>
                         </td>

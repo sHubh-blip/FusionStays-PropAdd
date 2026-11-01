@@ -238,8 +238,8 @@ const CarPackageAccounts = () => {
           </div>
 
           {/* Filter and Search Bar */}
-          <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
-            <div className="relative w-full md:w-80">
+          <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+            <div className="relative w-full lg:w-80 flex-shrink-0">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
@@ -250,11 +250,11 @@ const CarPackageAccounts = () => {
               />
             </div>
 
-            <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1.5 md:pb-0 custom-scrollbar">
+            <div className="flex flex-wrap lg:flex-nowrap items-center gap-2 w-full lg:w-auto overflow-x-auto pb-1 lg:pb-0 custom-scrollbar">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer"
+                className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer max-w-[150px] truncate"
               >
                 <option value="all">All Payment Statuses</option>
                 {filterOptions.statuses.map(st => (
@@ -265,7 +265,7 @@ const CarPackageAccounts = () => {
               <select
                 value={vendorFilter}
                 onChange={(e) => setVendorFilter(e.target.value)}
-                className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer"
+                className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer max-w-[130px] truncate"
               >
                 <option value="all">All Vendors</option>
                 {filterOptions.vendors.map(v => (
@@ -280,14 +280,14 @@ const CarPackageAccounts = () => {
                     setVendorFilter('all');
                     setSearch('');
                   }}
-                  className="px-2.5 py-1.5 text-xs text-rose-600 hover:text-rose-700 font-bold hover:bg-rose-50 rounded-xl transition-all"
+                  className="px-2.5 py-1.5 text-xs text-rose-600 hover:text-rose-700 font-bold hover:bg-rose-50 rounded-xl transition-all cursor-pointer flex-shrink-0"
                 >
                   Reset
                 </button>
               )}
             </div>
 
-            <div className="text-xs text-slate-500 font-semibold">
+            <div className="text-[11px] sm:text-xs text-slate-500 font-semibold text-right">
               Showing {records.length} of {totalRecords} records
             </div>
           </div>

@@ -54,6 +54,69 @@ const CarVoucherPDFModal = ({ booking, daywise = [], onClose }) => {
   const [inclusionsText, setInclusionsText] = useState(DEFAULT_INCLUSIONS);
   const [exclusionsText, setExclusionsText] = useState(DEFAULT_EXCLUSIONS);
 
+  // Helper to parse dates like "28-December-2026", "1-January-2027", "28-Dec-2026", "2026-12-28" for sorting
+  const parseDateForSort = (str) => {
+    if (!str) return 0;
+    const cleanStr = String(str).trim();
+    // Try standard Date parse first
+    const parsed = Date.parse(cleanStr);
+    if (!isNaN(parsed)) return parsed;
+
+    // Handle day-MonthName-year (e.g. 28-December-2026 or 1-Jan-2027)
+    const parts = cleanStr.split(/[-/\s]+/);
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10);
+      const monthStr = parts[1];
+      const year = parseInt(parts[2], 10);
+      if (!isNaN(day) && !isNaN(year)) {
+        const testDate = new Date(`${monthStr} ${day}, ${year}`);
+        if (!isNaN(testDate.getTime())) return testDate.getTime();
+      }
+    }
+    return 0;
+  };
+
+  // Editable Itinerary List sorted in ascending order of dates
+  const [itineraryDays, setItineraryDays] = useState(() => {
+    if (daywise && daywise.length > 0) {
+      const sorted = [...daywise].sort((a, b) => {
+        const timeA = parseDateForSort(a["Start Date"] || a["Date"]);
+        const timeB = parseDateForSort(b["Start Date"] || b["Date"]);
+        if (timeA && timeB) return timeA - timeB; // Ascending order
+        return 0;
+      });
+
+      return sorted.map((d, i) => ({
+        date: d["Start Date"] || `Day ${i + 1}`,
+        from: d["From"] || '',
+        to: d["To"] || '',
+        itinerary: d["Itinerary"] || ''
+      }));
+    }
+    return [
+      { date: startDate, from: '', to: '', itinerary: 'Point to point transfer / Sightseeing' }
+    ];
+  });
+
+  const handleUpdateItineraryDay = (index, field, value) => {
+    setItineraryDays(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const handleAddItineraryDay = () => {
+    setItineraryDays(prev => [
+      ...prev,
+      { date: `Day ${prev.length + 1}`, from: '', to: '', itinerary: '' }
+    ]);
+  };
+
+  const handleRemoveItineraryDay = (index) => {
+    setItineraryDays(prev => prev.filter((_, i) => i !== index));
+  };
+
   // Financial calculations
   const netTotalRaw = parseFloat(booking?.["Total Sales"] || booking?.["Billing Amt"] || 37000) || 0;
   const netTotal = Math.round(netTotalRaw);
@@ -587,17 +650,90 @@ const CarVoucherPDFModal = ({ booking, daywise = [], onClose }) => {
 
               {/* Itinerary Details */}
               <div className="mt-5">
-                <h3 className="text-center font-bold text-xs uppercase tracking-wider text-slate-900 mb-1.5">
-                  Itinerary Details
-                </h3>
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="w-16"></div>
+                  <h3 className="text-center font-bold text-xs uppercase tracking-wider text-slate-900 flex-1">
+                    Itinerary Details
+                  </h3>
+                  {isEditMode ? (
+                    <button
+                      type="button"
+                      onClick={handleAddItineraryDay}
+                      className="text-[10px] bg-brand-50 hover:bg-brand-100 text-brand-700 font-bold px-2 py-0.5 rounded border border-brand-200 transition-colors cursor-pointer"
+                    >
+                      + Add Day
+                    </button>
+                  ) : (
+                    <div className="w-16"></div>
+                  )}
+                </div>
 
                 <div className="border border-slate-300 p-3 text-xs leading-relaxed text-slate-900 space-y-2">
-                  {daywise && daywise.length > 0 ? (
-                    daywise.map((day, idx) => {
-                      const dateStr = day["Start Date"] || `Day ${idx + 1}`;
-                      const route = (day["From"] && day["To"]) ? `${day["From"]} to ${day["To"]}` : '';
-                      const itin = day["Itinerary"] ? `${route ? ': ' : ''}${day["Itinerary"]}` : '';
+                  {itineraryDays && itineraryDays.length > 0 ? (
+                    itineraryDays.map((day, idx) => {
+                      const dateStr = day.date || `Day ${idx + 1}`;
+                      const route = (day.from && day.to) ? `${day.from} to ${day.to}` : '';
+                      const itin = day.itinerary ? `${route ? ': ' : ''}${day.itinerary}` : '';
                       const fullDesc = `${route}${itin}`.trim() || 'Point to point transfer / Sightseeing';
+
+                      if (isEditMode) {
+                        return (
+                          <div key={idx} className="p-2 border border-amber-300 rounded-lg bg-amber-50/40 space-y-1.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5 flex-1">
+                                <span className="font-bold text-[11px] text-slate-700 whitespace-nowrap">Date/Day:</span>
+                                <input
+                                  type="text"
+                                  value={day.date}
+                                  onChange={(e) => handleUpdateItineraryDay(idx, 'date', e.target.value)}
+                                  className="w-36 text-xs font-bold border border-amber-300 rounded px-1.5 py-0.5 bg-white focus:outline-none"
+                                  placeholder="e.g. 28-December-2026"
+                                />
+                              </div>
+
+                              <div className="flex items-center gap-1.5 flex-1">
+                                <span className="font-bold text-[11px] text-slate-700 whitespace-nowrap">Route:</span>
+                                <input
+                                  type="text"
+                                  value={day.from}
+                                  onChange={(e) => handleUpdateItineraryDay(idx, 'from', e.target.value)}
+                                  className="w-24 text-xs border border-amber-300 rounded px-1.5 py-0.5 bg-white focus:outline-none"
+                                  placeholder="From"
+                                />
+                                <span className="text-slate-400">to</span>
+                                <input
+                                  type="text"
+                                  value={day.to}
+                                  onChange={(e) => handleUpdateItineraryDay(idx, 'to', e.target.value)}
+                                  className="w-24 text-xs border border-amber-300 rounded px-1.5 py-0.5 bg-white focus:outline-none"
+                                  placeholder="To"
+                                />
+                              </div>
+
+                              {itineraryDays.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveItineraryDay(idx)}
+                                  className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 text-[11px] font-bold px-1.5 py-0.5 rounded cursor-pointer"
+                                  title="Remove day"
+                                >
+                                  ✕
+                                </button>
+                              )}
+                            </div>
+
+                            <div>
+                              <textarea
+                                rows={2}
+                                value={day.itinerary}
+                                onChange={(e) => handleUpdateItineraryDay(idx, 'itinerary', e.target.value)}
+                                className="w-full text-xs border border-amber-300 rounded p-1.5 bg-white focus:outline-none leading-relaxed"
+                                placeholder="Day itinerary, sightseeing spots, and schedule details..."
+                              />
+                            </div>
+                          </div>
+                        );
+                      }
 
                       return (
                         <div key={idx} className="flex items-start gap-1">
